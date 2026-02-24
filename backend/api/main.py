@@ -31,9 +31,18 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Allow all origins by default; set ALLOWED_ORIGINS env var in production
+# e.g. ALLOWED_ORIGINS=https://your-app.manus.space,https://yourdomain.com
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS: list[str] = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins != "*"
+    else ["*"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten in production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
