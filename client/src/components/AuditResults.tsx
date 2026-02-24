@@ -6,26 +6,9 @@ import { useState } from "react";
 import { ScoreGauge } from "./ScoreGauge";
 import { DimensionBar } from "./DimensionBar";
 import { FindingCard } from "./FindingCard";
+import type { AuditData } from "@/lib/mockAudit";
 
-interface Finding {
-  dimension: string;
-  criterion: string;
-  issue: string;
-  severity: "Critical" | "High" | "Medium" | "Low";
-  points_lost: number;
-}
-
-interface AuditData {
-  url: string;
-  total_score: number;
-  grade: string;
-  seo_score: number;
-  sgo_score: number;
-  geo_score: number;
-  findings: Finding[];
-  top_gaps: string[];
-  audit_timestamp: string;
-}
+type Finding = AuditData["findings"][number];
 
 interface AuditResultsProps {
   data: AuditData;
