@@ -21,7 +21,9 @@ export interface AuditLeadPayload {
   sgoScore: number | null;
   geoScore: number | null;
   tier: string | null;
+  upgradeCost?: string;
   isDemoMode: boolean;
+  followUpDraft?: string;
   submittedAt: string; // ISO 8601
 }
 

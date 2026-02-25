@@ -7,6 +7,7 @@ import { ScoreGauge } from "./ScoreGauge";
 import { DimensionBar } from "./DimensionBar";
 import { FindingCard } from "./FindingCard";
 import type { AuditData } from "@/lib/mockAudit";
+import { PricingTiers } from "./PricingTiers";
 
 type Finding = AuditData["findings"][number];
 
@@ -127,6 +128,17 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
             <p className="text-sm text-white/30 text-center py-6">No findings for this dimension.</p>
           )}
         </div>
+      </div>
+
+      {/* Pricing Tiers */}
+      <div className="glass-card p-6">
+        <h3 className="syne text-xl font-bold text-white mb-1">
+          What does it cost to fix this?
+        </h3>
+        <p className="text-sm text-white/40 mb-5">
+          Your score determines which tier applies. See exactly what it costs to reach the next level.
+        </p>
+        <PricingTiers score={data.total_score} />
       </div>
 
       {/* CTA */}

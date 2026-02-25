@@ -16,6 +16,11 @@ vi.mock("./_core/notification", () => ({
   notifyOwner: vi.fn().mockResolvedValue(true),
 }));
 
+// Mock the Zapier webhook so tests don't make real HTTP calls
+vi.mock("./webhooks", () => ({
+  fireZapierWebhook: vi.fn().mockResolvedValue(undefined),
+}));
+
 function createPublicContext(): TrpcContext {
   return {
     user: null,
@@ -59,7 +64,25 @@ describe("audit.run", () => {
     expect(result.data).toBeNull();
   });
 
-  it("saves lead to database when email is provided", async () => {
+  it("saves lead to database for every audit — including anonymous visitors", async () => {
+    const { insertAuditLead } = await import("./db");
+    const caller = appRouter.createCaller(createPublicContext());
+
+    // Anonymous visitor — no email, no business name
+    await caller.audit.run({ url: "https://example.com" });
+
+    expect(insertAuditLead).toHaveBeenCalledOnce();
+    expect(insertAuditLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://example.com",
+        email: null,
+        businessName: null,
+        isDemoMode: 1,
+      })
+    );
+  });
+
+  it("saves lead with email and business name when provided", async () => {
     const { insertAuditLead } = await import("./db");
     const caller = appRouter.createCaller(createPublicContext());
 
@@ -80,50 +103,68 @@ describe("audit.run", () => {
     );
   });
 
-  it("does not save lead when no email or business name is provided", async () => {
-    const { insertAuditLead } = await import("./db");
+  it("notifies owner on EVERY audit — even anonymous visitors", async () => {
+    const { notifyOwner } = await import("./_core/notification");
     const caller = appRouter.createCaller(createPublicContext());
 
-    await caller.audit.run({
-      url: "https://example.com",
-    });
+    // Anonymous visitor
+    await caller.audit.run({ url: "https://anonymous-visitor.com" });
 
-    expect(insertAuditLead).not.toHaveBeenCalled();
-  });
-
-  it("rejects invalid URLs", async () => {
-    const caller = appRouter.createCaller(createPublicContext());
-
-    await expect(
-      caller.audit.run({ url: "not-a-url" })
-    ).rejects.toThrow();
-  });
-
-  it("rejects invalid email addresses", async () => {
-    const caller = appRouter.createCaller(createPublicContext());
-
-    await expect(
-      caller.audit.run({
-        url: "https://example.com",
-        email: "not-an-email",
+    expect(notifyOwner).toHaveBeenCalledOnce();
+    // Title should indicate anonymous visit
+    expect(notifyOwner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining("anonymous-visitor.com"),
       })
-    ).rejects.toThrow();
+    );
   });
 
-  it("notifies owner when email is provided", async () => {
+  it("includes personalised follow-up draft in owner notification", async () => {
     const { notifyOwner } = await import("./_core/notification");
     const caller = appRouter.createCaller(createPublicContext());
 
     await caller.audit.run({
-      url: "https://smaidm.com",
-      email: "client@business.com",
+      url: "https://filmset.co.za",
+      email: "info@filmset.co.za",
+      businessName: "FilmSet",
     });
 
     expect(notifyOwner).toHaveBeenCalledOnce();
-    expect(notifyOwner).toHaveBeenCalledWith(
+    const call = (notifyOwner as ReturnType<typeof vi.fn>).mock.calls[0][0] as { title: string; content: string };
+    expect(call.content).toContain("PERSONALISED FOLLOW-UP DRAFT");
+    expect(call.content).toContain("filmset.co.za");
+    expect(call.content).toContain("info@filmset.co.za");
+  });
+
+  it("fires Zapier webhook on every audit with upgrade cost and follow-up draft", async () => {
+    const { fireZapierWebhook } = await import("./webhooks");
+    const caller = appRouter.createCaller(createPublicContext());
+
+    await caller.audit.run({
+      url: "https://thecallsheet.co.za",
+      email: "editor@thecallsheet.co.za",
+    });
+
+    expect(fireZapierWebhook).toHaveBeenCalledOnce();
+    expect(fireZapierWebhook).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "New AI Visibility Audit Lead",
+        url: "https://thecallsheet.co.za",
+        email: "editor@thecallsheet.co.za",
+        upgradeCost: expect.any(String),
+        followUpDraft: expect.stringContaining("PERSONALISED FOLLOW-UP DRAFT"),
       })
     );
+  });
+
+  it("rejects invalid URLs", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.audit.run({ url: "not-a-url" })).rejects.toThrow();
+  });
+
+  it("rejects invalid email addresses", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.audit.run({ url: "https://example.com", email: "not-an-email" })
+    ).rejects.toThrow();
   });
 });

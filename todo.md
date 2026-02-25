@@ -68,3 +68,21 @@
 - [x] Wire Zapier webhook call into audit.run procedure after lead is saved
 - [x] Add vitest test for webhook helper
 - [ ] Save checkpoint
+
+## Phase 8: Tiered Score-Based Pricing System
+- [ ] Define 5 score bands with ZAR pricing (0–24, 25–49, 50–74, 75–89, 90–100)
+- [x] Build PricingTiers React component showing current band + upgrade path
+- [x] Integrate PricingTiers into AuditResults page (shows after score is revealed)
+- [x] Add international payment system recommendation section to results
+- [x] Produce standalone rate card PDF (SMAIDM branded)
+- [x] Produce international payment guide document
+- [ ] Update skill with pricing reference
+
+## Phase 9: Sales Funnel Notification System
+- [x] Enhance notifyOwner call in audit.run to include full audit data (URL, score, tier, findings summary)
+- [x] Include visitor email + business name in notification (if provided)
+- [x] Generate personalised follow-up pitch draft in the notification body
+- [x] Fire notification on EVERY audit — even anonymous (no email) visitors
+- [x] Add Zapier webhook payload with full audit data for email automation
+- [x] Write vitest test for enhanced notification content
+- [x] Update rate card PDF and international payment guide
