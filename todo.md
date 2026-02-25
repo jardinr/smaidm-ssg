@@ -56,3 +56,8 @@
 - [ ] Admin dashboard to view audit leads (DB table viewer)
 - [ ] PDF report download (branded one-page export)
 - [ ] Refine SGO/GEO scoring weights based on real audit data
+
+## Railway Deployment Fix
+- [ ] Add railway.json to backend/ with correct build/start commands
+- [ ] Add nixpacks.toml to backend/ to pin Python version
+- [ ] Push fix to GitHub so Railway rebuild succeeds

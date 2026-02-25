@@ -29,6 +29,16 @@ function createPublicContext(): TrpcContext {
   };
 }
 
+describe("AUDIT_API_URL secret validation", () => {
+  it("can reach the live Railway backend health endpoint", async () => {
+    const url = "https://smaidm-ssg-api-production.up.railway.app/health";
+    const res = await fetch(url);
+    expect(res.ok).toBe(true);
+    const body = await res.json() as { status: string };
+    expect(body.status).toBe("ok");
+  });
+});
+
 describe("audit.run", () => {
   beforeEach(() => {
     vi.clearAllMocks();
