@@ -8,6 +8,7 @@ import { fireZapierWebhook } from "./webhooks";
 import { invokeLLM } from "./_core/llm";
 import { z } from "zod";
 import { aiMentionsRouter } from "./routers/aiMentions";
+import { adminRouter } from "./routers/admin";
 
 // Python FastAPI backend URL — set AUDIT_API_URL env var to point to deployed backend
 const AUDIT_API_URL = process.env.AUDIT_API_URL ?? "";
@@ -222,6 +223,7 @@ export const appRouter = router({
   }),
 
   aiMentions: aiMentionsRouter,
+  admin: adminRouter,
 
   audit: router({
     /**

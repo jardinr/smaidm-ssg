@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { count, desc, eq, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertAuditLead, InsertUser, auditLeads, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -104,9 +104,68 @@ export async function insertAuditLead(lead: InsertAuditLead): Promise<void> {
   }
 }
 
-// Retrieve all audit leads (for admin dashboard)
-export async function getAuditLeads(limit = 100) {
+// Retrieve all audit leads with pagination and optional search (for admin dashboard)
+export async function getAuditLeads(opts: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+} = {}) {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(auditLeads).orderBy(auditLeads.createdAt).limit(limit);
+  if (!db) return { leads: [], total: 0 };
+
+  const { limit = 50, offset = 0, search } = opts;
+
+  const whereClause = search
+    ? or(
+        like(auditLeads.url, `%${search}%`),
+        like(auditLeads.businessName, `%${search}%`),
+        like(auditLeads.contactName, `%${search}%`),
+        like(auditLeads.email, `%${search}%`),
+      )
+    : undefined;
+
+  const [leads, totalResult] = await Promise.all([
+    whereClause
+      ? db.select().from(auditLeads).where(whereClause).orderBy(desc(auditLeads.createdAt)).limit(limit).offset(offset)
+      : db.select().from(auditLeads).orderBy(desc(auditLeads.createdAt)).limit(limit).offset(offset),
+    whereClause
+      ? db.select({ count: count() }).from(auditLeads).where(whereClause)
+      : db.select({ count: count() }).from(auditLeads),
+  ]);
+
+  return { leads, total: totalResult[0]?.count ?? 0 };
+}
+
+// Delete a single audit lead by ID
+export async function deleteAuditLead(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete audit lead: database not available");
+    return;
+  }
+  await db.delete(auditLeads).where(eq(auditLeads.id, id));
+}
+
+// Aggregate stats for the admin dashboard header cards
+export async function getAuditLeadStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, withContact: 0, liveAudits: 0, avgScore: null };
+
+  const [totalRes, contactRes, liveRes, avgRes] = await Promise.all([
+    db.select({ count: count() }).from(auditLeads),
+    db.select({ count: count() }).from(auditLeads).where(
+      sql`${auditLeads.email} IS NOT NULL OR ${auditLeads.phone} IS NOT NULL`
+    ),
+    db.select({ count: count() }).from(auditLeads).where(eq(auditLeads.isDemoMode, 0)),
+    db.select({ avg: sql<number>`AVG(${auditLeads.overallScore})` }).from(auditLeads).where(
+      sql`${auditLeads.overallScore} IS NOT NULL AND ${auditLeads.isDemoMode} = 0`
+    ),
+  ]);
+
+  return {
+    total: totalRes[0]?.count ?? 0,
+    withContact: contactRes[0]?.count ?? 0,
+    liveAudits: liveRes[0]?.count ?? 0,
+    avgScore: avgRes[0]?.avg ? Math.round(Number(avgRes[0].avg)) : null,
+  };
 }

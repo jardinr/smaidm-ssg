@@ -111,3 +111,15 @@
 - [x] Integrate AiMentionResults into AuditResults component
 - [x] Write vitest tests for aiMentions.analyse procedure (5 tests)
 - [x] All 23 vitest tests passing, 0 TypeScript errors
+
+## Phase 13: Secure Admin Dashboard
+- [x] Add admin tRPC router with getLeads, getStats, deleteLead, exportCsv procedures
+- [x] Add getAuditLeads (paginated + search), deleteAuditLead, getAuditLeadStats helpers to server/db.ts
+- [x] Build AdminDashboard page with stats cards, leads table, search/filter, pagination
+- [x] Add /admin route to App.tsx
+- [x] Protect /admin route — unauthenticated users see sign-in prompt, non-admins see 403
+- [x] Lead detail modal with full contact info, score breakdown, and quick action links
+- [x] CSV export (downloads smaidm-leads-YYYY-MM-DD.csv)
+- [x] Delete lead with confirmation dialog
+- [x] Write 14 vitest tests for admin procedures (access control, pagination, CSV, delete)
+- [x] All 37 tests passing, 0 TypeScript errors, global timeout raised to 30s
