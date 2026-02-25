@@ -8,6 +8,7 @@ import { DimensionBar } from "./DimensionBar";
 import { FindingCard } from "./FindingCard";
 import type { AuditData } from "@/lib/mockAudit";
 import { PricingTiers } from "./PricingTiers";
+import { AiMentionResults } from "./AiMentionResults";
 
 type Finding = AuditData["findings"][number];
 
@@ -139,6 +140,17 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           Your score determines which tier applies. See exactly what it costs to reach the next level.
         </p>
         <PricingTiers score={data.total_score} />
+      </div>
+
+      {/* AI Mention Analysis */}
+      <div className="glass-card p-6">
+        <h3 className="syne text-xl font-bold text-white mb-1">
+          AI Engine Visibility Analysis
+        </h3>
+        <p className="text-sm text-white/40 mb-2">
+          Find out whether your brand is mentioned by ChatGPT, Perplexity, and Google SGE — and who is being recommended instead.
+        </p>
+        <AiMentionResults url={data.url} />
       </div>
 
       {/* CTA */}

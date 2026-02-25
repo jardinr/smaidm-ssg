@@ -100,3 +100,14 @@
 - [x] Send client their own full report email (if email provided)
 - [x] Update Zapier webhook payload with phone + full findings
 - [x] Update vitest tests
+
+## Phase 12: Missing AI Visibility Capabilities
+- [x] Brand mention detection: query LLM with brand-related prompts and check if business appears
+- [x] Brand positioning analysis: determine how AI engines describe/position the brand
+- [x] Competitor recommendation detection: identify which competitors AI recommends for the same category/location
+- [x] Live authority signal scoring: domain age, backlink signals, entity consistency across web
+- [x] AiMentionResults UI component: display all four new signals in audit results
+- [x] Wire aiMentionsRouter into main tRPC router (appRouter)
+- [x] Integrate AiMentionResults into AuditResults component
+- [x] Write vitest tests for aiMentions.analyse procedure (5 tests)
+- [x] All 23 vitest tests passing, 0 TypeScript errors
