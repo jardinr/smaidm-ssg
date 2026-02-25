@@ -4,7 +4,8 @@
    Security: adminProcedure enforces owner-only access server-side
    ============================================================ */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { AuditTrendChart } from "@/components/AuditTrendChart";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -306,6 +307,13 @@ export default function AdminDashboard() {
     retry: false,
   });
 
+  const [chartDays] = useState(30);
+  const chartInput = useMemo(() => ({ days: chartDays }), [chartDays]);
+  const dailyStatsQuery = trpc.admin.getDailyStats.useQuery(chartInput, {
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
   const deleteMutation = trpc.admin.deleteLead.useMutation({
     onSuccess: () => {
       utils.admin.getLeads.invalidate();
@@ -501,6 +509,13 @@ export default function AdminDashboard() {
             color="#F59E0B"
           />
         </div>
+
+        {/* 30-day trend chart */}
+        <AuditTrendChart
+          data={dailyStatsQuery.data}
+          isLoading={dailyStatsQuery.isLoading}
+          days={chartDays}
+        />
 
         {/* Search + table */}
         <div

@@ -123,3 +123,11 @@
 - [x] Delete lead with confirmation dialog
 - [x] Write 14 vitest tests for admin procedures (access control, pagination, CSV, delete)
 - [x] All 37 tests passing, 0 TypeScript errors, global timeout raised to 30s
+
+## Phase 14: 30-Day Trend Chart
+- [x] Add getDailyStats helper to server/db.ts (daily audit count + avg score per day, zero-filled)
+- [x] Add admin.getDailyStats tRPC procedure (days: 7–90, adminProcedure)
+- [x] Build AuditTrendChart component using recharts ComposedChart (bars = volume, line = avg score)
+- [x] Integrate chart into AdminDashboard between stats cards and leads table
+- [x] Write 5 vitest tests for getDailyStats procedure (access control, validation, parameter passing)
+- [x] All 42 tests passing, 0 TypeScript errors

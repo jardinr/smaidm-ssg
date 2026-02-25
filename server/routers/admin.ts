@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import { adminProcedure, router } from "../_core/trpc";
-import { deleteAuditLead, getAuditLeadStats, getAuditLeads } from "../db";
+import { deleteAuditLead, getAuditLeadStats, getAuditLeads, getDailyStats } from "../db";
 
 export const adminRouter = router({
   /**
@@ -56,6 +56,20 @@ export const adminRouter = router({
     .mutation(async ({ input }) => {
       await deleteAuditLead(input.id);
       return { success: true };
+    }),
+
+  /**
+   * Per-day audit volume and average score for the past 30 days.
+   * Used to render the trend chart in the admin dashboard.
+   */
+  getDailyStats: adminProcedure
+    .input(
+      z.object({
+        days: z.number().int().min(7).max(90).default(30),
+      })
+    )
+    .query(async ({ input }) => {
+      return getDailyStats(input.days);
     }),
 
   /**

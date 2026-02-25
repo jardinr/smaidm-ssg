@@ -61,6 +61,17 @@ vi.mock("./db", () => ({
     avgScore: 72,
   }),
   deleteAuditLead: vi.fn().mockResolvedValue(undefined),
+  getDailyStats: vi.fn().mockResolvedValue(
+    Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - (29 - i));
+      return {
+        day: d.toISOString().slice(0, 10),
+        count: i % 3 === 0 ? 2 : 0,
+        avgScore: i % 3 === 0 ? 68 : null,
+      };
+    })
+  ),
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
   getDb: vi.fn().mockResolvedValue(null),
@@ -215,6 +226,47 @@ describe("admin.deleteLead", () => {
 
     await expect(caller.admin.deleteLead({ id: 0 })).rejects.toThrow();
     await expect(caller.admin.deleteLead({ id: -5 })).rejects.toThrow();
+  });
+});
+
+describe("admin.getDailyStats", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 30 daily entries by default", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.getDailyStats({ days: 30 });
+
+    expect(result).toHaveLength(30);
+    expect(result[0]).toHaveProperty("day");
+    expect(result[0]).toHaveProperty("count");
+    expect(result[0]).toHaveProperty("avgScore");
+  });
+
+  it("passes the days parameter to the db helper", async () => {
+    const { getDailyStats } = await import("./db");
+    const caller = appRouter.createCaller(createAdminContext());
+
+    await caller.admin.getDailyStats({ days: 14 });
+
+    expect(getDailyStats).toHaveBeenCalledWith(14);
+  });
+
+  it("rejects days below 7", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+
+    await expect(caller.admin.getDailyStats({ days: 3 })).rejects.toThrow();
+  });
+
+  it("rejects days above 90", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+
+    await expect(caller.admin.getDailyStats({ days: 100 })).rejects.toThrow();
+  });
+
+  it("throws FORBIDDEN for non-admin user", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+
+    await expect(caller.admin.getDailyStats({ days: 30 })).rejects.toThrow();
   });
 });
 

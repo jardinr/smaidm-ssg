@@ -146,6 +146,42 @@ export async function deleteAuditLead(id: number): Promise<void> {
   await db.delete(auditLeads).where(eq(auditLeads.id, id));
 }
 
+// Per-day audit volume and average score for the past N days (for trend chart)
+export async function getDailyStats(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Build a result set: one row per calendar day for the past `days` days.
+  // We use DATE() to bucket by day in the DB timezone (UTC).
+  const rows = await db
+    .select({
+      day: sql<string>`DATE(${auditLeads.createdAt})`,
+      count: count(),
+      avgScore: sql<number | null>`AVG(CASE WHEN ${auditLeads.isDemoMode} = 0 THEN ${auditLeads.overallScore} END)`,
+    })
+    .from(auditLeads)
+    .where(sql`${auditLeads.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${auditLeads.createdAt})`);
+
+  // Fill in missing days with zero so the chart has a continuous x-axis.
+  const map = new Map(rows.map(r => [r.day, r]));
+  const result: Array<{ day: string; count: number; avgScore: number | null }> = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    const row = map.get(key);
+    result.push({
+      day: key,
+      count: row ? Number(row.count) : 0,
+      avgScore: row?.avgScore != null ? Math.round(Number(row.avgScore)) : null,
+    });
+  }
+
+  return result;
+}
+
 // Aggregate stats for the admin dashboard header cards
 export async function getAuditLeadStats() {
   const db = await getDb();
