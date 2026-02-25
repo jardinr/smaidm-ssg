@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { insertAuditLead } from "./db";
 import { notifyOwner } from "./_core/notification";
+import { fireZapierWebhook } from "./webhooks";
 import { z } from "zod";
 
 // Python FastAPI backend URL — set AUDIT_API_URL env var to point to deployed backend
@@ -26,6 +27,7 @@ export const appRouter = router({
      * - Proxies to the Python FastAPI backend if AUDIT_API_URL is configured.
      * - Falls back to a structured error so the frontend can use demo mode.
      * - Always saves the lead to the database (non-fatal if DB is unavailable).
+     * - Fires a Zapier webhook so the owner receives an email notification.
      */
     run: publicProcedure
       .input(
@@ -89,13 +91,27 @@ export const appRouter = router({
             isDemoMode: isDemoMode ? 1 : 0,
           });
 
-          // Notify owner of new lead
+          // ── Notify owner via Manus in-app notification ──────────────────
           if (input.email) {
             await notifyOwner({
               title: `New AI Visibility Audit Lead`,
               content: `${input.email} just audited ${input.url}${input.businessName ? ` (${input.businessName})` : ""}. Score: ${scores?.overall_score ?? "demo"}/100.`,
             }).catch(() => {}); // non-fatal
           }
+
+          // ── Fire Zapier webhook → triggers email to smaidmsagency@outlook.com ──
+          await fireZapierWebhook({
+            email: input.email ?? null,
+            businessName: input.businessName ?? null,
+            url: input.url,
+            overallScore: scores?.overall_score ?? null,
+            seoScore: scores?.seo?.score ?? null,
+            sgoScore: scores?.sgo?.score ?? null,
+            geoScore: scores?.geo?.score ?? null,
+            tier: scores?.tier ?? null,
+            isDemoMode,
+            submittedAt: new Date().toISOString(),
+          }).catch(() => {}); // non-fatal
         }
 
         return {

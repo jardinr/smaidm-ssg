@@ -61,3 +61,10 @@
 - [ ] Add railway.json to backend/ with correct build/start commands
 - [ ] Add nixpacks.toml to backend/ to pin Python version
 - [ ] Push fix to GitHub so Railway rebuild succeeds
+
+## Phase 7: Zapier Email Notification
+- [ ] Add ZAPIER_WEBHOOK_URL secret to Manus Secrets
+- [x] Add fireZapierWebhook() helper in server/webhooks.ts
+- [x] Wire Zapier webhook call into audit.run procedure after lead is saved
+- [x] Add vitest test for webhook helper
+- [ ] Save checkpoint
