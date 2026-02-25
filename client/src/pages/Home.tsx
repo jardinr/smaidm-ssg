@@ -1,84 +1,57 @@
 /* ============================================================
    Home — SMAIDM SSG Platform landing page
    Design: Visibility Engine — deep navy hero, centered audit funnel
+   Live mode: calls tRPC audit.run → Python backend → DB lead capture
    Demo mode: falls back to mock data when no backend is reachable
    ============================================================ */
 import { useState } from "react";
 import { AuditForm } from "@/components/AuditForm";
 import { AuditResults } from "@/components/AuditResults";
 import { generateMockAudit, type AuditData } from "@/lib/mockAudit";
+import { trpc } from "@/lib/trpc";
 
 const HERO_BG = "https://private-us-east-1.manuscdn.com/sessionFile/LA7p5OssYnpbYcP7768cVq/sandbox/5PHDfPMQCle2OVyJY3lIc3-img-1_1771959823000_na1fn_aGVyby1iZw.png?x-oss-process=image/resize,w_1920,h_1920/format,webp/quality,q_80&Expires=1798761600&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcml2YXRlLXVzLWVhc3QtMS5tYW51c2Nkbi5jb20vc2Vzc2lvbkZpbGUvTEE3cDVPc3NZbnBiWWNQNzc2OGNWcS9zYW5kYm94LzVQSERmUE1RQ2xlMk9WeUpZM2xJYzMtaW1nLTFfMTc3MTk1OTgyMzAwMF9uYTFmbl9hR1Z5YnkxaVp3LnBuZz94LW9zcy1wcm9jZXNzPWltYWdlL3Jlc2l6ZSx3XzE5MjAsaF8xOTIwL2Zvcm1hdCx3ZWJwL3F1YWxpdHkscV84MCIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc5ODc2MTYwMH19fV19&Key-Pair-Id=K2HSFNDJXOU9YS&Signature=JvdZjfkEwBe4EexZQgWSPhsKYVo6vcN42hAsYDYQYBqE4~QaK6~oGZF7NPJ1X7DkaSi7VZqnFB80y~5sU2HwLyhdgq7iYU89IzG9CV5O1K8heqczDGnpMgqQXY2ZJOYfxtWCX1xkDVWncR2-JIY2PH~STwvKHbqWdpgG9kpYfLQ8NukjV2auPkETZ7S6zCAoD4iBFJcR8M3k2bNO2Bn9IadZn3qqYKqsAN4bbNr6wSYZNd3xJV5Zta9-0W3A9pYi5DCzRLhCiGIFGP22SFLsOFOp1xker0~puRQz96pCys9oXYeglQpXWndvj5D63wfMTu2B9TT0KihB7WPYrugOSg__";
 
-// Set VITE_API_BASE in your environment to point to the deployed backend.
-// When not set, the platform runs in demo mode with illustrative sample data.
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
-
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
   const [auditData, setAuditData] = useState<AuditData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
+  const auditMutation = trpc.audit.run.useMutation({
+    onSuccess: (result) => {
+      if (result.isDemoMode || !result.data) {
+        setAuditData(generateMockAudit(""));
+        setIsDemoMode(true);
+      } else {
+        setAuditData(result.data as unknown as AuditData);
+        setIsDemoMode(false);
+      }
+    },
+    onError: (err) => {
+      setAuditError(err.message ?? "An unexpected error occurred. Please try again.");
+    },
+  });
+
   const handleAudit = async (formData: { url: string; businessName: string; email: string }) => {
-    setIsLoading(true);
-    setError(null);
+    setAuditError(null);
     setAuditData(null);
     setIsDemoMode(false);
 
-    // If no backend is configured, use demo mode immediately
-    if (!API_BASE) {
-      await new Promise(r => setTimeout(r, 1800)); // simulate scan delay
-      setAuditData(generateMockAudit(formData.url));
-      setIsDemoMode(true);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/audit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: formData.url,
-          business_name: formData.businessName,
-          email: formData.email,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail ?? `Error ${response.status}: Audit failed`);
-      }
-
-      const data: AuditData = await response.json();
-      setAuditData(data);
-    } catch (err: unknown) {
-      // If backend is unreachable, fall back to demo mode gracefully
-      const isNetworkError = err instanceof TypeError && (
-        err.message.includes("fetch") ||
-        err.message.includes("Failed to fetch") ||
-        err.message.includes("NetworkError")
-      );
-
-      if (isNetworkError) {
-        setAuditData(generateMockAudit(formData.url));
-        setIsDemoMode(true);
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred. Please try again.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    auditMutation.mutate({
+      url: formData.url,
+      businessName: formData.businessName || undefined,
+      email: formData.email || undefined,
+    });
   };
 
   const handleReset = () => {
     setAuditData(null);
-    setError(null);
+    setAuditError(null);
     setIsDemoMode(false);
+    auditMutation.reset();
   };
+
+  const isLoading = auditMutation.isPending;
 
   return (
     <div
@@ -101,18 +74,14 @@ export default function Home() {
 
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "oklch(0.72 0.14 185 / 0.2)", border: "1px solid oklch(0.72 0.14 185 / 0.4)" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="#14B8A6" strokeWidth="1.2" strokeOpacity="0.5" />
-              <circle cx="7" cy="7" r="3" stroke="#14B8A6" strokeWidth="1.2" />
-              <circle cx="7" cy="7" r="1" fill="#14B8A6" />
-            </svg>
-          </div>
-          <span className="syne font-bold text-white text-sm tracking-wide">SMAIDM SSG</span>
+        <div className="flex items-center gap-3">
+          <img
+            src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663245699750/iiiwCRQyohWmOVPx.jpeg"
+            alt="SMAIDM Logo"
+            className="h-8 w-auto object-contain"
+            style={{ filter: "drop-shadow(0 0 6px oklch(0.72 0.14 185 / 0.3))" }}
+          />
+          <span className="syne font-bold text-white text-sm tracking-wide hidden sm:block">SSG Platform</span>
         </div>
         <div className="flex items-center gap-4">
           <a
@@ -122,10 +91,10 @@ export default function Home() {
             082 266 0899
           </a>
           <a
-            href="mailto:smaidmsa@outlook.com"
+            href="mailto:smaidmsagency@outlook.com"
             className="text-xs mono text-white/40 hover:text-white/70 transition-colors"
           >
-            smaidmsa@outlook.com
+            smaidmsagency@outlook.com
           </a>
         </div>
       </nav>
@@ -189,7 +158,7 @@ export default function Home() {
                 )}
 
                 {/* Error */}
-                {error && (
+                {auditError && (
                   <div
                     className="mt-4 p-4 rounded-lg text-sm"
                     style={{
@@ -198,7 +167,7 @@ export default function Home() {
                       color: "oklch(0.75 0.18 15)",
                     }}
                   >
-                    <strong>Audit failed:</strong> {error}
+                    <strong>Audit failed:</strong> {auditError}
                   </div>
                 )}
               </div>
@@ -245,10 +214,10 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-5">
               <a
-                href="mailto:smaidmsa@outlook.com"
+                href="mailto:smaidmsagency@outlook.com"
                 className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
               >
-                smaidmsa@outlook.com
+                smaidmsagency@outlook.com
               </a>
               <a
                 href="tel:+27822660899"

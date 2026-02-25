@@ -139,7 +139,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           Book a free strategy call today.
         </p>
         <a
-          href="mailto:smaidmsa@outlook.com?subject=AI Visibility Audit — Strategy Call Request"
+          href="mailto:smaidmsagency@outlook.com?subject=AI Visibility Audit — Strategy Call Request"
           className="btn-teal inline-block px-6 py-3 rounded-lg text-sm font-semibold"
         >
           Book a Free Strategy Call →
