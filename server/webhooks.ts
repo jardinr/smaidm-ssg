@@ -15,6 +15,8 @@
 export interface AuditLeadPayload {
   email: string | null;
   businessName: string | null;
+  contactName: string | null;
+  phone: string | null;
   url: string;
   overallScore: number | null;
   seoScore: number | null;

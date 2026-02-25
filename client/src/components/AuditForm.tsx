@@ -5,23 +5,29 @@
 import { useState } from "react";
 
 interface AuditFormProps {
-  onSubmit: (data: { url: string; businessName: string; email: string }) => void;
+  onSubmit: (data: {
+    url: string;
+    businessName: string;
+    contactName: string;
+    email: string;
+    phone: string;
+  }) => void;
   isLoading: boolean;
 }
 
 export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
   const [url, setUrl] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Normalise a raw input value into a full https:// URL
   const normaliseUrl = (raw: string): string => {
     const trimmed = raw.trim();
     if (!trimmed) return trimmed;
-    // Already has a protocol — leave it
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    // Has // but no protocol
     if (trimmed.startsWith("//")) return `https:${trimmed}`;
     return `https://${trimmed}`;
   };
@@ -47,17 +53,41 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
     }
     setErrors({});
     const normalisedUrl = normaliseUrl(url);
-    onSubmit({ url: normalisedUrl, businessName: businessName.trim(), email: email.trim() });
+    onSubmit({
+      url: normalisedUrl,
+      businessName: businessName.trim(),
+      contactName: contactName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+    });
+  };
+
+  const inputStyle = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    fontFamily: "'JetBrains Mono', monospace",
+  } as React.CSSProperties;
+
+  const focusHandler = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
+    e.target.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
+  };
+
+  const blurHandler = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.border = "1px solid rgba(255,255,255,0.10)";
+    e.target.style.boxShadow = "none";
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+
       {/* URL field */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
           Website URL
         </label>
-        <div className="relative flex items-center rounded-lg overflow-hidden"
+        <div
+          className="relative flex items-center rounded-lg overflow-hidden"
           style={{
             border: errors.url
               ? "1px solid oklch(0.65 0.22 15 / 0.6)"
@@ -65,13 +95,9 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
             background: "rgba(255,255,255,0.06)",
           }}
         >
-          {/* Fixed https:// prefix */}
           <span
             className="pl-4 pr-1 py-3 text-sm select-none shrink-0"
-            style={{
-              color: "oklch(0.72 0.14 185)",
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
+            style={{ color: "oklch(0.72 0.14 185)", fontFamily: "'JetBrains Mono', monospace" }}
           >
             https://
           </span>
@@ -79,31 +105,29 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
             type="text"
             value={displayUrl}
             onChange={(e) => {
-              // Store the full normalised URL internally
-              const raw = e.target.value;
-              // Strip any protocol the user might paste in
-              const stripped = raw.replace(/^https?:\/\//i, "").replace(/^\/\//, "");
+              const stripped = e.target.value
+                .replace(/^https?:\/\//i, "")
+                .replace(/^\/\//, "");
               setUrl(stripped ? `https://${stripped}` : "");
             }}
             placeholder="yourbusiness.com"
             className="flex-1 pr-4 py-3 bg-transparent text-white placeholder-white/25 text-sm focus:outline-none"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
             onFocus={(e) => {
-              const parent = e.target.closest('div') as HTMLElement;
+              const parent = e.target.closest("div") as HTMLElement;
               if (parent) {
                 parent.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
                 parent.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
               }
             }}
             onBlur={(e) => {
-              const parent = e.target.closest('div') as HTMLElement;
+              const parent = e.target.closest("div") as HTMLElement;
               if (parent) {
                 parent.style.border = errors.url
                   ? "1px solid oklch(0.65 0.22 15 / 0.6)"
                   : "1px solid rgba(255,255,255,0.10)";
                 parent.style.boxShadow = "none";
               }
-              // Auto-normalise on blur
               if (url) setUrl(normaliseUrl(url));
             }}
           />
@@ -111,6 +135,40 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
         {errors.url && (
           <p className="text-xs" style={{ color: "oklch(0.75 0.18 15)" }}>{errors.url}</p>
         )}
+      </div>
+
+      {/* Two-column row: Contact Name + Phone */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
+            Your Name <span className="text-white/25 normal-case tracking-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            placeholder="Jane Smith"
+            className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
+            style={inputStyle}
+            onFocus={focusHandler}
+            onBlur={blurHandler}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
+            Phone <span className="text-white/25 normal-case tracking-normal">(optional)</span>
+          </label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+27 82 000 0000"
+            className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
+            style={inputStyle}
+            onFocus={focusHandler}
+            onBlur={blurHandler}
+          />
+        </div>
       </div>
 
       {/* Business name */}
@@ -124,18 +182,9 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           onChange={(e) => setBusinessName(e.target.value)}
           placeholder="ACME Corp"
           className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-          }}
-          onFocus={(e) => {
-            e.target.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
-            e.target.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
-          }}
-          onBlur={(e) => {
-            e.target.style.border = "1px solid rgba(255,255,255,0.10)";
-            e.target.style.boxShadow = "none";
-          }}
+          style={inputStyle}
+          onFocus={focusHandler}
+          onBlur={blurHandler}
         />
       </div>
 
@@ -150,18 +199,9 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
           className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-          }}
-          onFocus={(e) => {
-            e.target.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
-            e.target.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
-          }}
-          onBlur={(e) => {
-            e.target.style.border = "1px solid rgba(255,255,255,0.10)";
-            e.target.style.boxShadow = "none";
-          }}
+          style={inputStyle}
+          onFocus={focusHandler}
+          onBlur={blurHandler}
         />
       </div>
 

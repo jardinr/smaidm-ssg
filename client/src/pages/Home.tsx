@@ -32,7 +32,7 @@ export default function Home() {
     },
   });
 
-  const handleAudit = async (formData: { url: string; businessName: string; email: string }) => {
+  const handleAudit = async (formData: { url: string; businessName: string; contactName: string; email: string; phone: string }) => {
     setAuditError(null);
     setAuditData(null);
     setIsDemoMode(false);
@@ -40,7 +40,9 @@ export default function Home() {
     auditMutation.mutate({
       url: formData.url,
       businessName: formData.businessName || undefined,
+      contactName: formData.contactName || undefined,
       email: formData.email || undefined,
+      phone: formData.phone || undefined,
     });
   };
 

@@ -91,3 +91,12 @@
 - [x] Auto-prepend https:// so users can type plain domains (e.g. salocations.com)
 - [x] Show https:// as a fixed prefix in the input field UI
 - [x] Normalise URL on blur and before submission
+
+## Phase 11: Full Report Email + Client Details
+- [x] Add phone number field to AuditForm
+- [x] Update tRPC audit.run input schema to include phone
+- [x] Update db schema to store phone number in audit_leads table
+- [x] Enrich owner notification: include name, email, phone, full score breakdown, all findings
+- [x] Send client their own full report email (if email provided)
+- [x] Update Zapier webhook payload with phone + full findings
+- [x] Update vitest tests

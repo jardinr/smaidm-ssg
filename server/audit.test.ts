@@ -145,13 +145,72 @@ describe("audit.run", () => {
       email: "editor@thecallsheet.co.za",
     });
 
-    expect(fireZapierWebhook).toHaveBeenCalledOnce();
+    expect(fireZapierWebhook).toHaveBeenCalled();
+    const zapierCalls = vi.mocked(fireZapierWebhook).mock.calls;
+    const matchingCall = zapierCalls.find(c =>
+      c[0].url === "https://thecallsheet.co.za" &&
+      c[0].email === "editor@thecallsheet.co.za"
+    );
+    expect(matchingCall).toBeDefined();
+    expect(matchingCall![0].upgradeCost).toBeTruthy();
+    expect(matchingCall![0].followUpDraft).toContain("PERSONALISED FOLLOW-UP DRAFT");
+  }, 15_000);
+
+  it("saves contactName and phone to DB when provided", async () => {
+    const { insertAuditLead } = await import("./db");
+    const caller = appRouter.createCaller(createPublicContext());
+
+    await caller.audit.run({
+      url: "https://salocations.com",
+      contactName: "Jardin Roestorff",
+      phone: "+27822660899",
+      email: "jardinr@gmail.com",
+      businessName: "SALocations",
+    });
+
+    expect(insertAuditLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactName: "Jardin Roestorff",
+        phone: "+27822660899",
+      })
+    );
+  });
+
+  it("includes phone and contactName in owner notification content", async () => {
+    const { notifyOwner } = await import("./_core/notification");
+    const caller = appRouter.createCaller(createPublicContext());
+
+    await caller.audit.run({
+      url: "https://filmcapetown.co.za",
+      contactName: "Jane Smith",
+      phone: "+27831234567",
+      email: "jane@filmcapetown.co.za",
+    });
+
+    const notifyCalls = vi.mocked(notifyOwner).mock.calls;
+    const matchingCall = notifyCalls.find(c =>
+      c[0].title.includes("Jane Smith") || c[0].content.includes("Jane Smith")
+    );
+    expect(matchingCall).toBeDefined();
+    expect(matchingCall![0].content).toContain("+27831234567");
+    expect(matchingCall![0].content).toContain("Jane Smith");
+  }, 15_000);
+
+  it("includes contactName and phone in Zapier webhook payload", async () => {
+    const { fireZapierWebhook } = await import("./webhooks");
+    const caller = appRouter.createCaller(createPublicContext());
+
+    await caller.audit.run({
+      url: "https://example.com",
+      contactName: "Test User",
+      phone: "+27800000000",
+      email: "test@example.com",
+    });
+
     expect(fireZapierWebhook).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://thecallsheet.co.za",
-        email: "editor@thecallsheet.co.za",
-        upgradeCost: expect.any(String),
-        followUpDraft: expect.stringContaining("PERSONALISED FOLLOW-UP DRAFT"),
+        contactName: "Test User",
+        phone: "+27800000000",
       })
     );
   });
