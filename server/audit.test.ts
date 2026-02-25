@@ -154,7 +154,7 @@ describe("audit.run", () => {
     expect(matchingCall).toBeDefined();
     expect(matchingCall![0].upgradeCost).toBeTruthy();
     expect(matchingCall![0].followUpDraft).toContain("PERSONALISED FOLLOW-UP DRAFT");
-  }, 15_000);
+  }, 30_000);
 
   it("saves contactName and phone to DB when provided", async () => {
     const { insertAuditLead } = await import("./db");

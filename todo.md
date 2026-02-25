@@ -134,3 +134,19 @@
 
 ## Phase 15: Owner Admin Nav Link
 - [x] Add conditional admin link to platform nav in Home.tsx (visible only when user?.role === 'admin')
+
+## Phase 16: Fix Email Report Delivery
+- [ ] Audit current email sending code — identify why testers are not receiving reports
+- [ ] Implement reliable email delivery (Resend API or SMTP via nodemailer)
+- [ ] Send HTML-formatted audit report email to tester after audit completes
+- [ ] Write vitest tests for email sending procedure
+- [ ] All tests passing, 0 TypeScript errors
+
+## Phase 16: Urgency Offer + Real Email Delivery
+- [ ] Add RESEND_API_KEY secret and create server/email.ts helper using Resend API
+- [ ] Build UrgencyOfferBanner component — 24hr countdown, discounted rate, CTA
+- [ ] Integrate UrgencyOfferBanner into AuditResults page (top of results)
+- [ ] Replace fake LLM email with real Resend transactional email in audit.run
+- [ ] Email includes full score report + urgency offer + follow-up CTA
+- [ ] Write vitest tests for email helper
+- [ ] All tests passing, 0 TypeScript errors
