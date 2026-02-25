@@ -86,3 +86,8 @@
 - [x] Add Zapier webhook payload with full audit data for email automation
 - [x] Write vitest test for enhanced notification content
 - [x] Update rate card PDF and international payment guide
+
+## Phase 10: URL Input UX Fix
+- [x] Auto-prepend https:// so users can type plain domains (e.g. salocations.com)
+- [x] Show https:// as a fixed prefix in the input field UI
+- [x] Normalise URL on blur and before submission

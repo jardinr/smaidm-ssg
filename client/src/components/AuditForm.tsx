@@ -15,6 +15,20 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Normalise a raw input value into a full https:// URL
+  const normaliseUrl = (raw: string): string => {
+    const trimmed = raw.trim();
+    if (!trimmed) return trimmed;
+    // Already has a protocol — leave it
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    // Has // but no protocol
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    return `https://${trimmed}`;
+  };
+
+  // Strip the https:// prefix for display in the input
+  const displayUrl = url.replace(/^https?:\/\//i, "");
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!url.trim()) errs.url = "Website URL is required";
@@ -32,7 +46,8 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
       return;
     }
     setErrors({});
-    onSubmit({ url: url.trim(), businessName: businessName.trim(), email: email.trim() });
+    const normalisedUrl = normaliseUrl(url);
+    onSubmit({ url: normalisedUrl, businessName: businessName.trim(), email: email.trim() });
   };
 
   return (
@@ -42,29 +57,54 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
         <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
           Website URL
         </label>
-        <div className="relative">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://yourbusiness.com"
-            className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
+        <div className="relative flex items-center rounded-lg overflow-hidden"
+          style={{
+            border: errors.url
+              ? "1px solid oklch(0.65 0.22 15 / 0.6)"
+              : "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.06)",
+          }}
+        >
+          {/* Fixed https:// prefix */}
+          <span
+            className="pl-4 pr-1 py-3 text-sm select-none shrink-0"
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: errors.url
-                ? "1px solid oklch(0.65 0.22 15 / 0.6)"
-                : "1px solid rgba(255,255,255,0.10)",
+              color: "oklch(0.72 0.14 185)",
               fontFamily: "'JetBrains Mono', monospace",
             }}
+          >
+            https://
+          </span>
+          <input
+            type="text"
+            value={displayUrl}
+            onChange={(e) => {
+              // Store the full normalised URL internally
+              const raw = e.target.value;
+              // Strip any protocol the user might paste in
+              const stripped = raw.replace(/^https?:\/\//i, "").replace(/^\/\//, "");
+              setUrl(stripped ? `https://${stripped}` : "");
+            }}
+            placeholder="yourbusiness.com"
+            className="flex-1 pr-4 py-3 bg-transparent text-white placeholder-white/25 text-sm focus:outline-none"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
             onFocus={(e) => {
-              e.target.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
-              e.target.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
+              const parent = e.target.closest('div') as HTMLElement;
+              if (parent) {
+                parent.style.border = "1px solid oklch(0.72 0.14 185 / 0.6)";
+                parent.style.boxShadow = "0 0 0 3px oklch(0.72 0.14 185 / 0.12)";
+              }
             }}
             onBlur={(e) => {
-              e.target.style.border = errors.url
-                ? "1px solid oklch(0.65 0.22 15 / 0.6)"
-                : "1px solid rgba(255,255,255,0.10)";
-              e.target.style.boxShadow = "none";
+              const parent = e.target.closest('div') as HTMLElement;
+              if (parent) {
+                parent.style.border = errors.url
+                  ? "1px solid oklch(0.65 0.22 15 / 0.6)"
+                  : "1px solid rgba(255,255,255,0.10)";
+                parent.style.boxShadow = "none";
+              }
+              // Auto-normalise on blur
+              if (url) setUrl(normaliseUrl(url));
             }}
           />
         </div>
