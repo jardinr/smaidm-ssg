@@ -131,3 +131,6 @@
 - [x] Integrate chart into AdminDashboard between stats cards and leads table
 - [x] Write 5 vitest tests for getDailyStats procedure (access control, validation, parameter passing)
 - [x] All 42 tests passing, 0 TypeScript errors
+
+## Phase 15: Owner Admin Nav Link
+- [x] Add conditional admin link to platform nav in Home.tsx (visible only when user?.role === 'admin')

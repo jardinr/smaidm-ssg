@@ -9,10 +9,15 @@ import { AuditForm } from "@/components/AuditForm";
 import { AuditResults } from "@/components/AuditResults";
 import { generateMockAudit, type AuditData } from "@/lib/mockAudit";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Link } from "wouter";
 
 const HERO_BG = "https://private-us-east-1.manuscdn.com/sessionFile/LA7p5OssYnpbYcP7768cVq/sandbox/5PHDfPMQCle2OVyJY3lIc3-img-1_1771959823000_na1fn_aGVyby1iZw.png?x-oss-process=image/resize,w_1920,h_1920/format,webp/quality,q_80&Expires=1798761600&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcml2YXRlLXVzLWVhc3QtMS5tYW51c2Nkbi5jb20vc2Vzc2lvbkZpbGUvTEE3cDVPc3NZbnBiWWNQNzc2OGNWcS9zYW5kYm94LzVQSERmUE1RQ2xlMk9WeUpZM2xJYzMtaW1nLTFfMTc3MTk1OTgyMzAwMF9uYTFmbl9hR1Z5YnkxaVp3LnBuZz94LW9zcy1wcm9jZXNzPWltYWdlL3Jlc2l6ZSx3XzE5MjAsaF8xOTIwL2Zvcm1hdCx3ZWJwL3F1YWxpdHkscV84MCIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc5ODc2MTYwMH19fV19&Key-Pair-Id=K2HSFNDJXOU9YS&Signature=JvdZjfkEwBe4EexZQgWSPhsKYVo6vcN42hAsYDYQYBqE4~QaK6~oGZF7NPJ1X7DkaSi7VZqnFB80y~5sU2HwLyhdgq7iYU89IzG9CV5O1K8heqczDGnpMgqQXY2ZJOYfxtWCX1xkDVWncR2-JIY2PH~STwvKHbqWdpgG9kpYfLQ8NukjV2auPkETZ7S6zCAoD4iBFJcR8M3k2bNO2Bn9IadZn3qqYKqsAN4bbNr6wSYZNd3xJV5Zta9-0W3A9pYi5DCzRLhCiGIFGP22SFLsOFOp1xker0~puRQz96pCys9oXYeglQpXWndvj5D63wfMTu2B9TT0KihB7WPYrugOSg__";
 
 export default function Home() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [auditData, setAuditData] = useState<AuditData | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -98,6 +103,19 @@ export default function Home() {
           >
             smaidmsagency@outlook.com
           </a>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="text-xs mono px-2.5 py-1 rounded-md border transition-colors"
+              style={{
+                borderColor: "oklch(0.72 0.14 185 / 0.35)",
+                color: "oklch(0.72 0.14 185)",
+                background: "oklch(0.72 0.14 185 / 0.08)",
+              }}
+            >
+              Admin
+            </Link>
+          )}
         </div>
       </nav>
 
