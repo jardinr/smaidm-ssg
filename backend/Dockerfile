@@ -12,5 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Use shell form so $PORT is expanded at runtime from Railway's environment
-CMD uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Use a Python entrypoint so $PORT is read programmatically at runtime.
+# This avoids shell variable expansion issues in Docker CMD exec form.
+CMD ["python", "-c", "import os, uvicorn; uvicorn.run('api.main:app', host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))"]
