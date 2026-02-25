@@ -114,12 +114,20 @@ export default function Home() {
           </div>
           <span className="syne font-bold text-white text-sm tracking-wide">SMAIDM SSG</span>
         </div>
-        <a
-          href="mailto:hello@smaidm.com"
-          className="text-xs mono text-white/40 hover:text-white/70 transition-colors"
-        >
-          hello@smaidm.com
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="tel:+27822660899"
+            className="text-xs mono text-white/40 hover:text-white/70 transition-colors hidden sm:block"
+          >
+            082 266 0899
+          </a>
+          <a
+            href="mailto:smaidmsa@outlook.com"
+            className="text-xs mono text-white/40 hover:text-white/70 transition-colors"
+          >
+            smaidmsa@outlook.com
+          </a>
+        </div>
       </nav>
 
       {/* Main content */}
@@ -228,10 +236,45 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 text-center py-6 px-4">
-        <p className="text-xs mono text-white/20">
-          © 2025 SMAIDM Digital Services · AI Search Visibility Diagnostic Platform
-        </p>
+      <footer className="relative z-10 py-8 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <p className="text-xs mono text-white/40 font-medium">Jardin Roestorff · Founder, SMAIDM</p>
+              <p className="text-xs mono text-white/20 mt-0.5">© 2026 SMAIDM Digital Services · AI Search Visibility Diagnostic Platform</p>
+            </div>
+            <div className="flex items-center gap-5">
+              <a
+                href="mailto:smaidmsa@outlook.com"
+                className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
+              >
+                smaidmsa@outlook.com
+              </a>
+              <a
+                href="tel:+27822660899"
+                className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
+              >
+                082 266 0899
+              </a>
+              <a
+                href="https://quzllhzj.manus.space/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
+              >
+                Website
+              </a>
+              <a
+                href="http://www.youtube.com/@SMAIDM"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
+              >
+                YouTube
+              </a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );

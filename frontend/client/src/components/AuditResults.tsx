@@ -135,11 +135,11 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           Ready to fix these gaps?
         </h3>
         <p className="text-sm text-white/50 mb-4 max-w-sm mx-auto">
-          SMAIDM's AI Visibility specialists can resolve your top issues in 2–4 weeks.
-          Book a free strategy call.
+          Jardin Roestorff and the SMAIDM team can resolve your top AI visibility gaps in 2–4 weeks.
+          Book a free strategy call today.
         </p>
         <a
-          href="mailto:hello@smaidm.com?subject=AI Visibility Audit — Strategy Call Request"
+          href="mailto:smaidmsa@outlook.com?subject=AI Visibility Audit — Strategy Call Request"
           className="btn-teal inline-block px-6 py-3 rounded-lg text-sm font-semibold"
         >
           Book a Free Strategy Call →
