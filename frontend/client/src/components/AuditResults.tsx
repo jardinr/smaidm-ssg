@@ -1,11 +1,14 @@
 /* ============================================================
    AuditResults — Full audit report display
    Design: Visibility Engine — score gauge, dimension bars, findings
+   Enhancement: Integrated Executive Summary, per-dimension context labels,
+   and Closing Note for improved executive readability.
    ============================================================ */
 import { useState } from "react";
 import { ScoreGauge } from "./ScoreGauge";
 import { DimensionBar } from "./DimensionBar";
 import { FindingCard } from "./FindingCard";
+import { ExecutiveSummary, DimensionContext, ClosingNote } from "./ReportContext";
 import type { AuditData } from "@/lib/mockAudit";
 
 type Finding = AuditData["findings"][number];
@@ -22,10 +25,10 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
 
   const filteredFindings = filter === "All"
     ? data.findings
-    : data.findings.filter(f => f.dimension === filter);
+    : data.findings.filter((f: Finding) => f.dimension === filter);
 
-  const criticalCount = data.findings.filter(f => f.severity === "Critical").length;
-  const highCount = data.findings.filter(f => f.severity === "High").length;
+  const criticalCount = data.findings.filter((f: Finding) => f.severity === "Critical").length;
+  const highCount = data.findings.filter((f: Finding) => f.severity === "High").length;
 
   const auditDate = new Date(data.audit_timestamp).toLocaleString("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
@@ -34,6 +37,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
 
   return (
     <div className="flex flex-col gap-6 fade-up">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -47,6 +51,9 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           ← New Audit
         </button>
       </div>
+
+      {/* Executive Summary — new block */}
+      <ExecutiveSummary />
 
       {/* Score + Dimensions */}
       <div className="glass-card p-6">
@@ -72,6 +79,21 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </div>
       </div>
 
+      {/* Assessment Overview — section context labels */}
+      <div className="glass-card p-5">
+        <h3 className="text-xs font-semibold tracking-widest uppercase mono text-white/40 mb-4">
+          Assessment Overview
+        </h3>
+        <p className="text-xs text-white/45 leading-relaxed mb-4">
+          The SSG system evaluates three core areas that influence how AI systems interpret
+          websites. Each section below explains what was assessed and why it matters to
+          your business.
+        </p>
+        <DimensionContext dimension="SEO" />
+        <DimensionContext dimension="SGO" />
+        <DimensionContext dimension="GEO" />
+      </div>
+
       {/* Top 3 Gaps */}
       {data.top_gaps.length > 0 && (
         <div className="glass-card p-5">
@@ -79,7 +101,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
             Top Priority Gaps
           </h3>
           <div className="flex flex-col gap-2">
-            {data.top_gaps.map((gap, i) => (
+            {data.top_gaps.map((gap: string, i: number) => (
               <div key={i} className="flex items-start gap-3">
                 <span
                   className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mono mt-0.5"
@@ -98,7 +120,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold tracking-widest uppercase mono text-white/40">
-            All Findings ({data.findings.length})
+            Key Findings ({data.findings.length})
           </h3>
           {/* Filter tabs */}
           <div className="flex gap-1">
@@ -120,7 +142,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          {filteredFindings.map((finding, i) => (
+          {filteredFindings.map((finding: Finding, i: number) => (
             <FindingCard key={i} finding={finding} index={i} />
           ))}
           {filteredFindings.length === 0 && (
@@ -128,6 +150,9 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           )}
         </div>
       </div>
+
+      {/* Closing Note — new block */}
+      <ClosingNote />
 
       {/* CTA */}
       <div className="glass-card p-6 text-center">
@@ -146,6 +171,7 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </a>
         <p className="text-xs text-white/25 mt-3 mono">{auditDate} UTC</p>
       </div>
+
     </div>
   );
 }
