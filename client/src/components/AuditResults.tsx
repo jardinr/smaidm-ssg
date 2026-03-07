@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ScoreGauge } from "./ScoreGauge";
 import { DimensionBar } from "./DimensionBar";
 import { FindingCard } from "./FindingCard";
+import { ExecutiveSummary, DimensionContext, ClosingNote } from "./ReportContext";
 import type { AuditData } from "@/lib/mockAudit";
 import { PricingTiers } from "./PricingTiers";
 import { AiMentionResults } from "./AiMentionResults";
@@ -50,6 +51,9 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </button>
       </div>
 
+      {/* Executive Summary — new block */}
+      <ExecutiveSummary />
+
       {/* Score + Dimensions */}
       <div className="glass-card p-6">
         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -74,6 +78,21 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </div>
       </div>
 
+      {/* Assessment Overview — section context labels */}
+      <div className="glass-card p-5">
+        <h3 className="text-xs font-semibold tracking-widest uppercase mono text-white/40 mb-4">
+          Assessment Overview
+        </h3>
+        <p className="text-xs text-white/45 leading-relaxed mb-4">
+          The SSG system evaluates three core areas that influence how AI systems interpret
+          websites. Each section below explains what was assessed and why it matters to
+          your business.
+        </p>
+        <DimensionContext dimension="SEO" />
+        <DimensionContext dimension="SGO" />
+        <DimensionContext dimension="GEO" />
+      </div>
+
       {/* Top 3 Gaps */}
       {data.top_gaps.length > 0 && (
         <div className="glass-card p-5">
@@ -96,11 +115,11 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </div>
       )}
 
-      {/* Findings */}
+      {/* Key Findings */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold tracking-widest uppercase mono text-white/40">
-            All Findings ({data.findings.length})
+            Key Findings ({data.findings.length})
           </h3>
           {/* Filter tabs */}
           <div className="flex gap-1">
@@ -130,6 +149,9 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           )}
         </div>
       </div>
+
+      {/* Closing Note — new block */}
+      <ClosingNote />
 
       {/* Pricing Tiers */}
       <div className="glass-card p-6">

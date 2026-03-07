@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { insertAuditLead } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { fireZapierWebhook } from "./webhooks";
@@ -247,33 +248,40 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         let auditResult: Record<string, unknown> | null = null;
-        let isDemoMode = false;
+        const isDemoMode = false;
 
-        if (AUDIT_API_URL) {
-          try {
-            const response = await fetch(`${AUDIT_API_URL}/audit`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                url: input.url,
-                business_name: input.businessName ?? "",
-                email: input.email ?? "",
-              }),
-              signal: AbortSignal.timeout(30_000),
-            });
+        if (!AUDIT_API_URL) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "The audit engine is currently unavailable. Please contact support at smaidmsagency@outlook.com.",
+          });
+        }
 
-            if (!response.ok) {
-              const errData = await response.json().catch(() => ({}));
-              throw new Error((errData as { detail?: string }).detail ?? `Audit API error ${response.status}`);
-            }
+        try {
+          const response = await fetch(`${AUDIT_API_URL}/audit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: input.url,
+              business_name: input.businessName ?? "",
+              email: input.email ?? "",
+            }),
+            signal: AbortSignal.timeout(30_000),
+          });
 
-            auditResult = await response.json() as Record<string, unknown>;
-          } catch (err) {
-            console.error("[Audit] Backend call failed:", err);
-            isDemoMode = true;
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error((errData as { detail?: string }).detail ?? `Audit API error ${response.status}`);
           }
-        } else {
-          isDemoMode = true;
+
+          auditResult = await response.json() as Record<string, unknown>;
+        } catch (err) {
+          console.error("[Audit] Backend call failed:", err);
+          const message = err instanceof Error ? err.message : "Unexpected error";
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `We couldn't complete the audit for this URL. ${message}`,
+          });
         }
 
         // Extract scores from result
