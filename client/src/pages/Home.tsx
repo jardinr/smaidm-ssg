@@ -88,7 +88,7 @@ export default function Home() {
             className="h-8 w-auto object-contain"
             style={{ filter: "drop-shadow(0 0 6px oklch(0.72 0.14 185 / 0.3))" }}
           />
-          <span className="syne font-bold text-white text-sm tracking-wide hidden sm:block">SMAIDM SSG Audit</span>
+          <span className="syne font-bold text-white text-sm tracking-wide hidden sm:block">SMAIDM SSG Platform</span>
         </div>
         <div className="flex items-center gap-4">
           <a
@@ -230,7 +230,7 @@ export default function Home() {
           <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
               <p className="text-xs mono text-white/40 font-medium">Jardin Roestorff · Founder, SMAIDM</p>
-              <p className="text-xs mono text-white/20 mt-0.5">© 2026 SMAIDM Digital Services · SMAIDM SSG Audit — AI Search Visibility Platform</p>
+              <p className="text-xs mono text-white/20 mt-0.5">© 2026 SMAIDM Digital Services · SMAIDM SSG Platform — AI Search Visibility</p>
             </div>
             <div className="flex items-center gap-5">
               <a
