@@ -1,12 +1,31 @@
 services:
+  # Python audit engine backend — uses Dockerfile for reliable pip/lxml build
   - type: web
     name: smaidm-ssg-api
-    runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: PORT
+        value: "8000"
     healthCheckPath: /health
+    autoDeploy: true
+
+  # Node.js platform server (frontend + tRPC API)
+  - type: web
+    name: smaidm-ssg-platform
+    runtime: node
+    rootDir: .
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.0"
+      - key: NODE_ENV
+        value: production
+      - key: AUDIT_API_URL
+        fromService:
+          name: smaidm-ssg-api
+          type: web
+          property: host
+    healthCheckPath: /
     autoDeploy: true
