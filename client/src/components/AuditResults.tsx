@@ -11,6 +11,8 @@ import { ExecutiveSummary, ClosingNote } from "./ReportContext";
 import type { AuditData } from "@/lib/mockAudit";
 import { PricingTiers } from "./PricingTiers";
 import { AiMentionResults } from "./AiMentionResults";
+import { UrgencyOfferBanner } from "./UrgencyOfferBanner";
+import { CALENDLY_URL } from "@/const";
 
 type Finding = AuditData["findings"][number];
 
@@ -101,6 +103,23 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
     },
   ];
 
+  // Pricing helpers for urgency banner
+  const getUrgentCost = (s: number): string => {
+    if (s >= 90) return "R 960/mo monitoring";
+    if (s >= 75) return "R 2,800 once-off + R 1,200/mo";
+    if (s >= 50) return "R 5,200 once-off + R 1,200/mo";
+    if (s >= 25) return "R 7,600 once-off + R 1,200/mo";
+    return "R 10,000 once-off + R 1,500/mo";
+  };
+  const getRegularCost = (s: number): string => {
+    if (s >= 90) return "R 1,200/mo monitoring";
+    if (s >= 75) return "R 3,500 once-off + R 1,200/mo";
+    if (s >= 50) return "R 6,500 once-off + R 1,200/mo";
+    if (s >= 25) return "R 9,500 once-off + R 1,200/mo";
+    return "R 12,500 once-off + R 1,500/mo";
+  };
+  const siteName = data.url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
+
   return (
     <div className="flex flex-col gap-6 fade-up">
       {/* Header */}
@@ -116,6 +135,16 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
           ← New Audit
         </button>
       </div>
+
+      {/* Urgency Offer Banner — 24-hour countdown CTA */}
+      <UrgencyOfferBanner
+        urgentCost={getUrgentCost(data.total_score)}
+        regularCost={getRegularCost(data.total_score)}
+        siteName={siteName}
+        score={data.total_score}
+        tier={data.grade ?? ""}
+        calendlyUrl={CALENDLY_URL}
+      />
 
       {/* Executive Summary */}
       <ExecutiveSummary />
@@ -429,15 +458,31 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
         </h3>
         <p className="text-sm text-white/50 mb-4 max-w-sm mx-auto">
           Jardin Roestorff and the SMAIDM team can resolve your top AI visibility gaps in 2–4 weeks.
-          Book a free strategy call today.
+          Book a free 15-minute strategy call today.
         </p>
         <a
-          href="mailto:smaidmsagency@outlook.com?subject=AI Visibility Audit — Strategy Call Request"
+          href={CALENDLY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="btn-teal inline-block px-6 py-3 rounded-lg text-sm font-semibold"
+          style={{ boxShadow: "0 0 20px rgba(20,184,166,0.3)" }}
         >
-          Book a Free Strategy Call →
+          📅 Book a Free Strategy Call →
         </a>
-        <p className="text-xs text-white/25 mt-3 mono">{auditDate} UTC</p>
+        <p className="text-xs text-white/40 mt-3">
+          Or email{" "}
+          <a
+            href="mailto:smaidmsagency@outlook.com?subject=AI Visibility Audit — Strategy Call Request"
+            className="text-teal-400 hover:underline"
+          >
+            smaidmsagency@outlook.com
+          </a>
+          {" "}or call{" "}
+          <a href="tel:+27822660899" className="text-teal-400 hover:underline">
+            082 266 0899
+          </a>
+        </p>
+        <p className="text-xs text-white/25 mt-2 mono">{auditDate} UTC</p>
       </div>
     </div>
   );

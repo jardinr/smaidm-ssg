@@ -95,11 +95,14 @@ export function buildAuditReportHtml(params: {
   urgentCost: string;
   isDemoMode: boolean;
   offerExpiresAt: string; // ISO string — 48 hrs from now
+  /** Optional Calendly booking URL — falls back to mailto: if not provided */
+  calendlyUrl?: string;
 }): string {
   const {
     url, businessName, contactName,
     overallScore, seoScore, sgoScore, geoScore,
     tier, regularCost, urgentCost, isDemoMode, offerExpiresAt,
+    calendlyUrl,
   } = params;
 
   const siteName = businessName ?? url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
@@ -220,9 +223,9 @@ export function buildAuditReportHtml(params: {
                     </tr>
                   </table>
                   <p style="margin:0 0 16px;font-size:12px;color:rgba(255,255,255,0.4);font-family:monospace;">⏰ Offer expires: ${offerDate}</p>
-                  <a href="mailto:smaidmsagency@outlook.com?subject=Priority Fix — ${siteName} (${scoreDisplay})&body=Hi Jardin,%0A%0AI want to book the 48-hour priority fix for ${url}.%0A%0APlease confirm availability."
+                  <a href="${calendlyUrl ?? `mailto:smaidmsagency@outlook.com?subject=Priority Fix — ${siteName} (${scoreDisplay})&body=Hi Jardin,%0A%0AI want to book the 48-hour priority fix for ${url}.%0A%0APlease confirm availability.`}"
                      style="display:inline-block;background:#14B8A6;color:#0B1426;font-weight:700;font-size:14px;padding:14px 28px;border-radius:8px;text-decoration:none;">
-                    Book Priority Fix Now →
+                    📅 Book Priority Fix Now →
                   </a>
                 </td>
               </tr>
@@ -276,49 +279,43 @@ export function buildAuditReportText(params: {
   urgentCost: string;
   isDemoMode: boolean;
   offerExpiresAt: string;
+  /** Optional Calendly booking URL — falls back to mailto instructions if not provided */
+  calendlyUrl?: string;
 }): string {
   const {
     url, businessName, contactName,
     overallScore, seoScore, sgoScore, geoScore,
     tier, regularCost, urgentCost, isDemoMode, offerExpiresAt,
+    calendlyUrl,
   } = params;
-
   const siteName = businessName ?? url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
   const greeting = contactName ? `Hi ${contactName},` : "Hi,";
   const scoreDisplay = overallScore != null ? `${overallScore}/100` : "Demo";
   const offerDate = new Date(offerExpiresAt).toLocaleDateString("en-ZA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-
+  const bookingInstructions = calendlyUrl
+    ? `Book your slot here: ${calendlyUrl}`
+    : `To book: smaidmsagency@outlook.com or call 082 266 0899\nSubject line to use: "Priority Fix — ${siteName} (${scoreDisplay})"`;
   return `${greeting}
-
 Thank you for running your free AI Visibility Audit on the SMAIDM SSG Platform.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   OVERALL SCORE:  ${scoreDisplay} — ${tier}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   SEO Fundamentals:          ${seoScore ?? "—"}/100
   SGO (Search Generative):   ${sgoScore ?? "—"}/100
   GEO (Generative Engine):   ${geoScore ?? "—"}/100
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${isDemoMode ? "\nNote: This was a demo audit. A live audit will analyse your actual website.\n" : ""}
-
 ⚡ 48-HOUR PRIORITY FIX OFFER
 ──────────────────────────────
 Book your AI visibility fix within 48 hours and lock in the priority rate:
-
   Priority Rate (48hrs):  ${urgentCost}
   Standard Rate (after):  ${regularCost}
-
 Offer expires: ${offerDate}
-
-To book: smaidmsagency@outlook.com or call 082 266 0899
-
-Subject line to use: "Priority Fix — ${siteName} (${scoreDisplay})"
-
+${bookingInstructions}
 ──────────────────────────────
 If the 48-hour window has passed, reach out anytime — we will discuss the best path forward.
-
 Jardin Roestorff
 Founder, SMAIDM Digital Services
 smaidmsagency@outlook.com | 082 266 0899`.trim();

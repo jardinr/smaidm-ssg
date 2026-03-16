@@ -1,5 +1,14 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
+/**
+ * Calendly booking link for the main strategy call CTA.
+ * Set VITE_CALENDLY_URL in your environment to override.
+ * The default points to the SMAIDM Calendly page once it is created.
+ */
+export const CALENDLY_URL =
+  (import.meta.env.VITE_CALENDLY_URL as string | undefined) ??
+  "https://calendly.com/smaidm/strategy-call";
+
 // Generate login URL at runtime so redirect URI reflects the current origin.
 // Returns a safe fallback when OAuth env vars are not configured (e.g. self-hosted deployments).
 export const getLoginUrl = () => {

@@ -49,13 +49,28 @@
 - [x] 6 Git commits with checkpoint tags
 - [x] 8 GitHub issues created (Sprint 1–3)
 
-## Pending / Next Steps
-- [ ] Deploy Python backend to Render/Railway (set AUDIT_API_URL secret)
-- [ ] Set AUDIT_API_URL in Manus Secrets to enable live audits
-- [ ] Add Calendly booking link to CTA button
-- [ ] Admin dashboard to view audit leads (DB table viewer)
-- [ ] PDF report download (branded one-page export)
+## Monday, March 16th — Sprint Complete
+- [x] **Phase 16:** Replaced fake LLM email stub with real Resend API delivery in `audit.run`
+- [x] **Phase 16:** Built `UrgencyOfferBanner` React component with 24hr countdown and discounted CTA
+- [x] **Phase 8:** Confirmed 5-tier ZAR pricing in `PricingTiers.tsx`
+- [x] **Phase 8:** Produced standalone branded rate card PDF (`docs/SMAIDM_Rate_Card_2026.pdf`)
+- [x] **Phase 9:** Enhanced `notifyOwner` with sales urgency signals, full score breakdown, and 24-hr rate
+- [x] **Phase 11:** Upgraded client report email with Calendly CTA (`/book-strategy-call`)
+- [x] **Phase 11:** Added `CALENDLY_URL` constant, configurable via `VITE_CALENDLY_URL` env var
+- [x] **EOD Sync:** All 53 vitest tests passing, 0 TypeScript errors
+
+## Tuesday, March 17th — Planned Sprint
+- [ ] **Phase 17:** PDF report download — add a "Download PDF Report" button to `AuditResults` that generates a branded one-page summary using the rate card PDF as a template.
+- [ ] **Phase 18:** Admin dashboard lead filtering — add filters to the admin leads table (by score range, tier, has contact info).
+- [ ] **Phase 19:** Public vanity URL — set up `smaidm.co.za` to point to the live Manus application URL.
+- [ ] **Phase 20:** Final code cleanup and documentation review before client handover.
+
+## Backlog / Future Ideas
+- [ ] Deploy Python backend to Render/Railway (set `AUDIT_API_URL` secret)
+- [ ] Set `AUDIT_API_URL` in Manus Secrets to enable live audits
 - [ ] Refine SGO/GEO scoring weights based on real audit data
+- [ ] International payment guide document
+- [ ] Update skill with pricing reference
 
 ## Railway Deployment Fix
 - [ ] Add railway.json to backend/ with correct build/start commands

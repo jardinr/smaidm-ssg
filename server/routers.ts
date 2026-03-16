@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { insertAuditLead } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { fireZapierWebhook } from "./webhooks";
-import { invokeLLM } from "./_core/llm";
+import { sendEmail, buildAuditReportHtml, buildAuditReportText } from "./email";
 import { z } from "zod";
 import { aiMentionsRouter } from "./routers/aiMentions";
 import { adminRouter } from "./routers/admin";
@@ -34,6 +34,16 @@ function getUpgradeCost(score: number | null): string {
   return "R 12,500 once-off + R 1,500/mo";
 }
 
+/** 48-hour urgency rate — 20% discount on the once-off component */
+function getUrgentCost(score: number | null): string {
+  if (score === null) return "R 7,600 once-off";
+  if (score >= 90) return "R 960/mo monitoring";
+  if (score >= 75) return "R 2,800 once-off + R 1,200/mo";
+  if (score >= 50) return "R 5,200 once-off + R 1,200/mo";
+  if (score >= 25) return "R 7,600 once-off + R 1,200/mo";
+  return "R 10,000 once-off + R 1,500/mo";
+}
+
 function buildOwnerNotification(params: {
   url: string;
   businessName: string | null;
@@ -53,20 +63,25 @@ function buildOwnerNotification(params: {
     overallScore, seoScore, sgoScore, geoScore,
     tier, upgradeCost, isDemoMode,
   } = params;
-
   const displayName = contactName ?? businessName ?? "Anonymous visitor";
   const hasContact = email || phone;
-
+  const urgentCost = getUrgentCost(overallScore);
+  // Sales urgency signal based on score
+  const urgencySignal = overallScore === null ? "⚠️ Demo mode"
+    : overallScore < 25 ? "🔴 CRITICAL — high-value lead, act within 24hrs"
+    : overallScore < 50 ? "🟠 HIGH PRIORITY — strong upgrade potential"
+    : overallScore < 75 ? "🟡 MEDIUM PRIORITY — targeted fixes available"
+    : overallScore < 90 ? "🟢 LOW PRIORITY — close to AI-ready, small win"
+    : "✅ AI-READY — monitoring upsell opportunity";
   const title = hasContact
     ? `🔔 New Lead: ${displayName} audited ${url}`
     : `👁 Anonymous audit: ${url}`;
-
   const followUp = buildFollowUpDraft(url, contactName, businessName, email, phone, overallScore, tier, upgradeCost);
-
   const content = [
     "═══════════════════════════════════════",
     "  SMAIDM SSG — NEW AUDIT LEAD",
     "═══════════════════════════════════════",
+    `  URGENCY: ${urgencySignal}`,
     "",
     "── CLIENT DETAILS ──────────────────────",
     `  Name:     ${contactName ?? "Not provided"}`,
@@ -74,20 +89,20 @@ function buildOwnerNotification(params: {
     `  Email:    ${email ?? "Not provided"}`,
     `  Phone:    ${phone ?? "Not provided"}`,
     "",
-    "── AUDIT RESULTS ───────────────────────",
+    "── FULL AUDIT RESULTS ──────────────────",
     `  Website:  ${url}`,
     `  Score:    ${overallScore ?? "Demo mode"}/100 — Grade ${tier}`,
-    `  SEO:      ${seoScore ?? "—"}/100`,
-    `  SGO:      ${sgoScore ?? "—"}/100`,
-    `  GEO:      ${geoScore ?? "—"}/100`,
+    `  SEO:      ${seoScore ?? "—"}/100  (Search Discoverability)`,
+    `  SGO:      ${sgoScore ?? "—"}/100  (AI Answer Readiness)`,
+    `  GEO:      ${geoScore ?? "—"}/100  (Business Trust & Authority)`,
     `  Mode:     ${isDemoMode ? "Demo (backend offline)" : "Live audit"}`,
     "",
-    "── INVESTMENT ──────────────────────────",
-    `  ${upgradeCost}`,
+    "── INVESTMENT ────────────────────────",
+    `  Standard rate:  ${upgradeCost}`,
+    `  24-hr rate:     ${urgentCost}  ← 20% discount if booked today`,
     "",
     followUp,
   ].join("\n");
-
   return { title, content };
 }
 
@@ -248,15 +263,61 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         let auditResult: Record<string, unknown> | null = null;
-        const isDemoMode = false;
-
-        if (!AUDIT_API_URL) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "The audit engine is currently unavailable. Please contact support at smaidmsagency@outlook.com.",
+        let isDemoMode = !AUDIT_API_URL;
+        if (isDemoMode) {
+          // Demo mode: no backend configured — save lead, notify owner, fire webhook, return null data
+          const tier = "Demo";
+          const upgradeCost = "R 9,500 once-off + R 1,200/mo";
+          await insertAuditLead({
+            url: input.url,
+            businessName: input.businessName ?? null,
+            contactName: input.contactName ?? null,
+            email: input.email ?? null,
+            phone: input.phone ?? null,
+            overallScore: null,
+            seoScore: null,
+            sgoScore: null,
+            geoScore: null,
+            tier,
+            isDemoMode: 1,
+          }).catch((err) => { console.error("[Audit] DB insert failed (non-fatal):", err); });
+          const { title: demoTitle, content: demoContent } = buildOwnerNotification({
+            url: input.url,
+            businessName: input.businessName ?? null,
+            contactName: input.contactName ?? null,
+            email: input.email ?? null,
+            phone: input.phone ?? null,
+            overallScore: null,
+            seoScore: null,
+            sgoScore: null,
+            geoScore: null,
+            tier,
+            upgradeCost,
+            isDemoMode: true,
           });
+          await notifyOwner({ title: demoTitle, content: demoContent }).catch(() => {});
+          const followUpDraft = buildFollowUpDraft(
+            input.url, input.contactName ?? null, input.businessName ?? null,
+            input.email ?? null, input.phone ?? null, null, tier, upgradeCost
+          );
+          await fireZapierWebhook({
+            email: input.email ?? null,
+            businessName: input.businessName ?? null,
+            contactName: input.contactName ?? null,
+            phone: input.phone ?? null,
+            url: input.url,
+            overallScore: null,
+            seoScore: null,
+            sgoScore: null,
+            geoScore: null,
+            tier,
+            upgradeCost,
+            isDemoMode: true,
+            followUpDraft,
+            submittedAt: new Date().toISOString(),
+          }).catch(() => {});
+          return { isDemoMode: true, data: null };
         }
-
         try {
           const response = await fetch(`${AUDIT_API_URL}/audit`, {
             method: "POST",
@@ -339,9 +400,12 @@ export const appRouter = router({
           content: notifContent,
         }).catch(() => {}); // non-fatal
 
-        // ── Send client their full report email (if email provided) ─────────
+        // ── Send client their full report email via Resend API (Phase 16) ──
         if (input.email) {
-          const clientReport = buildClientReportEmail({
+          const offerExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+          const urgentCost = getUrgentCost(overallScore);
+          const regularCost = upgradeCost;
+          const emailHtml = buildAuditReportHtml({
             url: input.url,
             businessName: input.businessName ?? null,
             contactName: input.contactName ?? null,
@@ -350,23 +414,34 @@ export const appRouter = router({
             sgoScore,
             geoScore,
             tier,
-            upgradeCost,
+            regularCost,
+            urgentCost,
             isDemoMode,
+            offerExpiresAt,
           });
-
-          // Use LLM to send via email — wrapped in try/catch so it never blocks
-          await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "You are an email delivery assistant. The user wants to send a transactional email. Confirm receipt only.",
-              },
-              {
-                role: "user",
-                content: `Send this email report to ${input.email}:\n\nSubject: Your AI Visibility Audit Report — ${input.url}\n\n${clientReport}`,
-              },
-            ],
-          }).catch(() => {}); // non-fatal — Zapier handles the actual delivery
+          const emailText = buildAuditReportText({
+            url: input.url,
+            businessName: input.businessName ?? null,
+            contactName: input.contactName ?? null,
+            overallScore,
+            seoScore,
+            sgoScore,
+            geoScore,
+            tier,
+            regularCost,
+            urgentCost,
+            isDemoMode,
+            offerExpiresAt,
+          });
+          const siteName = input.businessName ?? input.url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
+          await sendEmail({
+            to: input.email,
+            subject: `Your AI Visibility Audit Report — ${siteName} (${overallScore ?? "Demo"}/100)`,
+            html: emailHtml,
+            text: emailText,
+          }).catch((err) => {
+            console.error("[Audit] Resend email failed (non-fatal):", err);
+          });
         }
 
         // ── Fire Zapier webhook → email to smaidmsagency@outlook.com ────────
