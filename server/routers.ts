@@ -6,7 +6,13 @@ import { TRPCError } from "@trpc/server";
 import { insertAuditLead } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { fireZapierWebhook } from "./webhooks";
-import { sendEmail, buildAuditReportHtml, buildAuditReportText } from "./email";
+import {
+  sendEmail,
+  sendOwnerAuditNotification,
+  buildAuditReportHtml,
+  buildAuditReportText,
+  AuditFinding,
+} from "./email";
 import { z } from "zod";
 import { aiMentionsRouter } from "./routers/aiMentions";
 import { adminRouter } from "./routers/admin";
@@ -159,74 +165,6 @@ SMAIDM | 082 266 0899 | smaidmsagency@outlook.com
 ─── END DRAFT ───────────────────────────`.trim();
 }
 
-function buildClientReportEmail(params: {
-  url: string;
-  businessName: string | null;
-  contactName: string | null;
-  overallScore: number | null;
-  seoScore: number | null;
-  sgoScore: number | null;
-  geoScore: number | null;
-  tier: string;
-  upgradeCost: string;
-  isDemoMode: boolean;
-}): string {
-  const {
-    url, businessName, contactName,
-    overallScore, seoScore, sgoScore, geoScore,
-    tier, upgradeCost, isDemoMode,
-  } = params;
-
-  const siteName = businessName ?? url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
-  const greeting = contactName ? `Hi ${contactName},` : "Hi,";
-
-  return `
-${greeting}
-
-Thank you for running your free AI Visibility Audit on the SMAIDM SSG Platform.
-
-Here is your full report for ${siteName} (${url}):
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  OVERALL SCORE:  ${overallScore ?? "Demo"}/100 — Grade ${tier}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  SEO Fundamentals:          ${seoScore ?? "—"}/100
-  SGO (Search Generative):   ${sgoScore ?? "—"}/100
-  GEO (Generative Engine):   ${geoScore ?? "—"}/100
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${isDemoMode ? "Note: This was a demo audit. A live audit will analyse your actual website signals.\n\n" : ""}WHAT THIS MEANS FOR YOUR BUSINESS
-
-${
-    overallScore === null || isDemoMode
-      ? "Your live audit will reveal exactly which AI visibility signals are missing and what to fix first."
-      : overallScore >= 90
-      ? "Your site is AI-ready — ChatGPT, Perplexity, and Google SGE can find and recommend you. Monthly monitoring ensures you stay there."
-      : overallScore >= 75
-      ? "You're close to being AI-recommended. A few targeted fixes to your structured data and content structure will push you into the top tier."
-      : overallScore >= 50
-      ? "AI engines can find your site but are not actively recommending it. The key gaps are structured data (schema markup) and question-based content architecture."
-      : overallScore >= 25
-      ? "Your site is visible in traditional search but largely invisible to AI engines like ChatGPT and Perplexity. Schema markup, entity signals, and FAQ content are the priority fixes."
-      : "Your site is effectively invisible to AI search engines. This is fully fixable — most clients see a 30–40 point improvement in the first session."
-  }
-
-INVESTMENT TO REACH THE NEXT TIER
-
-${upgradeCost}
-
-NEXT STEP
-
-Book a free 15-minute strategy call to see exactly what we would fix and what the result looks like:
-→ smaidmsagency@outlook.com
-→ 082 266 0899
-
-Jardin Roestorff
-Founder, SMAIDM Digital Services
-AI Search Visibility Specialist
-`.trim();
-}
-
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -248,8 +186,9 @@ export const appRouter = router({
      * - Falls back to demo mode when backend is unavailable.
      * - ALWAYS saves the lead and fires owner notification (even anonymous visitors).
      * - Notification includes full client details: name, email, phone, score breakdown, follow-up draft.
-     * - Sends client their own full report email if they provided an email address.
-     * - Also fires Zapier webhook for email automation to smaidmsagency@outlook.com.
+     * - Sends client their own full report email (with detailed findings) if they provided an email.
+     * - Sends owner a direct Resend email on EVERY audit (independent of Zapier).
+     * - Also fires Zapier webhook for additional automation.
      */
     run: publicProcedure
       .input(
@@ -264,10 +203,12 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         let auditResult: Record<string, unknown> | null = null;
         let isDemoMode = !AUDIT_API_URL;
+        const tier = getTierLabel(null);
+        const upgradeCost = getUpgradeCost(null);
+        const urgentCost = getUrgentCost(null);
+
         if (isDemoMode) {
           // Demo mode: no backend configured — save lead, notify owner, fire webhook, return null data
-          const tier = "Demo";
-          const upgradeCost = "R 9,500 once-off + R 1,200/mo";
           await insertAuditLead({
             url: input.url,
             businessName: input.businessName ?? null,
@@ -281,6 +222,7 @@ export const appRouter = router({
             tier,
             isDemoMode: 1,
           }).catch((err) => { console.error("[Audit] DB insert failed (non-fatal):", err); });
+
           const { title: demoTitle, content: demoContent } = buildOwnerNotification({
             url: input.url,
             businessName: input.businessName ?? null,
@@ -296,6 +238,26 @@ export const appRouter = router({
             isDemoMode: true,
           });
           await notifyOwner({ title: demoTitle, content: demoContent }).catch(() => {});
+
+          // ── Direct owner email via Resend (demo mode) ────────────────────
+          await sendOwnerAuditNotification({
+            url: input.url,
+            businessName: input.businessName ?? null,
+            contactName: input.contactName ?? null,
+            email: input.email ?? null,
+            phone: input.phone ?? null,
+            overallScore: null,
+            seoScore: null,
+            sgoScore: null,
+            geoScore: null,
+            tier,
+            upgradeCost,
+            urgentCost,
+            isDemoMode: true,
+            findings: [],
+            topGaps: [],
+          }).catch((err) => { console.error("[Audit] Owner email failed (non-fatal):", err); });
+
           const followUpDraft = buildFollowUpDraft(
             input.url, input.contactName ?? null, input.businessName ?? null,
             input.email ?? null, input.phone ?? null, null, tier, upgradeCost
@@ -318,6 +280,7 @@ export const appRouter = router({
           }).catch(() => {});
           return { isDemoMode: true, data: null };
         }
+
         try {
           const response = await fetch(`${AUDIT_API_URL}/audit`, {
             method: "POST",
@@ -345,7 +308,7 @@ export const appRouter = router({
           });
         }
 
-        // Extract scores from result
+        // Extract scores and findings from result
         const scores = auditResult as {
           overall_score?: number;
           total_score?: number;
@@ -353,14 +316,19 @@ export const appRouter = router({
           sgo?: { score?: number };
           geo?: { score?: number };
           tier?: string;
+          findings?: AuditFinding[];
+          top_gaps?: string[];
         } | null;
 
         const overallScore = scores?.overall_score ?? scores?.total_score ?? null;
         const seoScore = scores?.seo?.score ?? null;
         const sgoScore = scores?.sgo?.score ?? null;
         const geoScore = scores?.geo?.score ?? null;
-        const tier = getTierLabel(overallScore);
-        const upgradeCost = getUpgradeCost(overallScore);
+        const liveTier = getTierLabel(overallScore);
+        const liveUpgradeCost = getUpgradeCost(overallScore);
+        const liveUrgentCost = getUrgentCost(overallScore);
+        const findings: AuditFinding[] = (scores?.findings ?? []) as AuditFinding[];
+        const topGaps: string[] = scores?.top_gaps ?? [];
 
         // ── Save lead to database (non-blocking, fires on every audit) ──────
         await insertAuditLead({
@@ -373,7 +341,7 @@ export const appRouter = router({
           seoScore: seoScore,
           sgoScore: sgoScore,
           geoScore: geoScore,
-          tier: tier,
+          tier: liveTier,
           isDemoMode: isDemoMode ? 1 : 0,
         }).catch((err) => {
           console.error("[Audit] DB insert failed (non-fatal):", err);
@@ -390,8 +358,8 @@ export const appRouter = router({
           seoScore,
           sgoScore,
           geoScore,
-          tier,
-          upgradeCost,
+          tier: liveTier,
+          upgradeCost: liveUpgradeCost,
           isDemoMode,
         });
 
@@ -400,11 +368,33 @@ export const appRouter = router({
           content: notifContent,
         }).catch(() => {}); // non-fatal
 
-        // ── Send client their full report email via Resend API (Phase 16) ──
+        // ── Direct owner email via Resend (EVERY live audit) ────────────────
+        // This fires independently of Zapier — ensures owner always receives
+        // a detailed email notification with full findings breakdown.
+        await sendOwnerAuditNotification({
+          url: input.url,
+          businessName: input.businessName ?? null,
+          contactName: input.contactName ?? null,
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+          overallScore,
+          seoScore,
+          sgoScore,
+          geoScore,
+          tier: liveTier,
+          upgradeCost: liveUpgradeCost,
+          urgentCost: liveUrgentCost,
+          isDemoMode,
+          findings,
+          topGaps,
+        }).catch((err) => {
+          console.error("[Audit] Owner email failed (non-fatal):", err);
+        });
+
+        // ── Send client their full report email via Resend API ──────────────
+        // Now includes detailed findings breakdown and top priority gaps.
         if (input.email) {
           const offerExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-          const urgentCost = getUrgentCost(overallScore);
-          const regularCost = upgradeCost;
           const emailHtml = buildAuditReportHtml({
             url: input.url,
             businessName: input.businessName ?? null,
@@ -413,11 +403,13 @@ export const appRouter = router({
             seoScore,
             sgoScore,
             geoScore,
-            tier,
-            regularCost,
-            urgentCost,
+            tier: liveTier,
+            regularCost: liveUpgradeCost,
+            urgentCost: liveUrgentCost,
             isDemoMode,
             offerExpiresAt,
+            findings,
+            topGaps,
           });
           const emailText = buildAuditReportText({
             url: input.url,
@@ -427,11 +419,13 @@ export const appRouter = router({
             seoScore,
             sgoScore,
             geoScore,
-            tier,
-            regularCost,
-            urgentCost,
+            tier: liveTier,
+            regularCost: liveUpgradeCost,
+            urgentCost: liveUrgentCost,
             isDemoMode,
             offerExpiresAt,
+            findings,
+            topGaps,
           });
           const siteName = input.businessName ?? input.url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
           await sendEmail({
@@ -440,11 +434,11 @@ export const appRouter = router({
             html: emailHtml,
             text: emailText,
           }).catch((err) => {
-            console.error("[Audit] Resend email failed (non-fatal):", err);
+            console.error("[Audit] Client report email failed (non-fatal):", err);
           });
         }
 
-        // ── Fire Zapier webhook → email to smaidmsagency@outlook.com ────────
+        // ── Fire Zapier webhook → additional automation ──────────────────────
         const followUpDraft = buildFollowUpDraft(
           input.url,
           input.contactName ?? null,
@@ -452,8 +446,8 @@ export const appRouter = router({
           input.email ?? null,
           input.phone ?? null,
           overallScore,
-          tier,
-          upgradeCost
+          liveTier,
+          liveUpgradeCost
         );
 
         await fireZapierWebhook({
@@ -466,8 +460,8 @@ export const appRouter = router({
           seoScore: seoScore,
           sgoScore: sgoScore,
           geoScore: geoScore,
-          tier: tier,
-          upgradeCost: upgradeCost,
+          tier: liveTier,
+          upgradeCost: liveUpgradeCost,
           isDemoMode,
           followUpDraft: followUpDraft,
           submittedAt: new Date().toISOString(),
