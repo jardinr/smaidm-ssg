@@ -27,5 +27,17 @@ services:
           name: smaidm-ssg-api
           type: web
           property: host
+      - key: RESEND_API_KEY
+        value: re_CdtMCStJ_Lby6qcjxwWQPjp1repyYgWeM
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: VITE_APP_ID
+        sync: false
+      - key: OWNER_OPEN_ID
+        sync: false
+      - key: OAUTH_SERVER_URL
+        sync: false
     healthCheckPath: /
     autoDeploy: true
