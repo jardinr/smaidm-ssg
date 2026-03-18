@@ -198,6 +198,15 @@ export const appRouter = router({
           contactName: z.string().optional(),
           email: z.string().email("Please enter a valid email").optional(),
           phone: z.string().optional(),
+          /**
+           * Internal owner/test flag.
+           * When true:
+           *   - The 24/48-hour discount countdown is suppressed in all emails.
+           *   - The lead is NOT saved to the database.
+           *   - Zapier webhook is NOT fired.
+           *   - Owner notification IS still sent (for testing email delivery).
+           */
+          isOwnerTest: z.boolean().optional().default(false),
         })
       )
       .mutation(async ({ input }) => {
@@ -209,19 +218,22 @@ export const appRouter = router({
 
         if (isDemoMode) {
           // Demo mode: no backend configured — save lead, notify owner, fire webhook, return null data
-          await insertAuditLead({
-            url: input.url,
-            businessName: input.businessName ?? null,
-            contactName: input.contactName ?? null,
-            email: input.email ?? null,
-            phone: input.phone ?? null,
-            overallScore: null,
-            seoScore: null,
-            sgoScore: null,
-            geoScore: null,
-            tier,
-            isDemoMode: 1,
-          }).catch((err) => { console.error("[Audit] DB insert failed (non-fatal):", err); });
+          // Skip DB insert and Zapier for owner test runs to avoid polluting lead data
+          if (!input.isOwnerTest) {
+            await insertAuditLead({
+              url: input.url,
+              businessName: input.businessName ?? null,
+              contactName: input.contactName ?? null,
+              email: input.email ?? null,
+              phone: input.phone ?? null,
+              overallScore: null,
+              seoScore: null,
+              sgoScore: null,
+              geoScore: null,
+              tier,
+              isDemoMode: 1,
+            }).catch((err) => { console.error("[Audit] DB insert failed (non-fatal):", err); });
+          }
 
           const { title: demoTitle, content: demoContent } = buildOwnerNotification({
             url: input.url,
@@ -254,30 +266,34 @@ export const appRouter = router({
             upgradeCost,
             urgentCost,
             isDemoMode: true,
+            isOwnerTest: input.isOwnerTest,
             findings: [],
             topGaps: [],
           }).catch((err) => { console.error("[Audit] Owner email failed (non-fatal):", err); });
 
-          const followUpDraft = buildFollowUpDraft(
-            input.url, input.contactName ?? null, input.businessName ?? null,
-            input.email ?? null, input.phone ?? null, null, tier, upgradeCost
-          );
-          await fireZapierWebhook({
-            email: input.email ?? null,
-            businessName: input.businessName ?? null,
-            contactName: input.contactName ?? null,
-            phone: input.phone ?? null,
-            url: input.url,
-            overallScore: null,
-            seoScore: null,
-            sgoScore: null,
-            geoScore: null,
-            tier,
-            upgradeCost,
-            isDemoMode: true,
-            followUpDraft,
-            submittedAt: new Date().toISOString(),
-          }).catch(() => {});
+          // Skip Zapier webhook for owner test runs
+          if (!input.isOwnerTest) {
+            const followUpDraft = buildFollowUpDraft(
+              input.url, input.contactName ?? null, input.businessName ?? null,
+              input.email ?? null, input.phone ?? null, null, tier, upgradeCost
+            );
+            await fireZapierWebhook({
+              email: input.email ?? null,
+              businessName: input.businessName ?? null,
+              contactName: input.contactName ?? null,
+              phone: input.phone ?? null,
+              url: input.url,
+              overallScore: null,
+              seoScore: null,
+              sgoScore: null,
+              geoScore: null,
+              tier,
+              upgradeCost,
+              isDemoMode: true,
+              followUpDraft,
+              submittedAt: new Date().toISOString(),
+            }).catch(() => {});
+          }
           return { isDemoMode: true, data: null };
         }
 
@@ -330,8 +346,8 @@ export const appRouter = router({
         const findings: AuditFinding[] = (scores?.findings ?? []) as AuditFinding[];
         const topGaps: string[] = scores?.top_gaps ?? [];
 
-        // ── Save lead to database (non-blocking, fires on every audit) ──────
-        await insertAuditLead({
+        // ── Save lead to database (skip for owner test runs) ──────────────
+        if (!input.isOwnerTest) await insertAuditLead({
           url: input.url,
           businessName: input.businessName ?? null,
           contactName: input.contactName ?? null,
@@ -385,6 +401,7 @@ export const appRouter = router({
           upgradeCost: liveUpgradeCost,
           urgentCost: liveUrgentCost,
           isDemoMode,
+          isOwnerTest: input.isOwnerTest,
           findings,
           topGaps,
         }).catch((err) => {
@@ -393,7 +410,8 @@ export const appRouter = router({
 
         // ── Send client their full report email via Resend API ──────────────
         // Now includes detailed findings breakdown and top priority gaps.
-        if (input.email) {
+        // Owner test runs: email is still sent but discount countdown is suppressed.
+        if (input.email && !input.isOwnerTest) {
           const offerExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
           const emailHtml = buildAuditReportHtml({
             url: input.url,
@@ -430,6 +448,8 @@ export const appRouter = router({
           const siteName = input.businessName ?? input.url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
           await sendEmail({
             to: input.email,
+            // BCC owner on every client report so SSG mailbox always receives a copy
+            bcc: ["smaidmsagency@outlook.com"],
             subject: `Your AI Visibility Audit Report — ${siteName} (${overallScore ?? "Demo"}/100)`,
             html: emailHtml,
             text: emailText,
@@ -438,7 +458,10 @@ export const appRouter = router({
           });
         }
 
-        // ── Fire Zapier webhook → additional automation ──────────────────────
+        // ── Fire Zapier webhook (skip for owner test runs) ─────────────────
+        if (input.isOwnerTest) {
+          return { isDemoMode, data: auditResult };
+        }
         const followUpDraft = buildFollowUpDraft(
           input.url,
           input.contactName ?? null,

@@ -18,6 +18,8 @@ export interface SendEmailOptions {
   subject: string;
   html: string;
   text?: string;
+  /** Optional BCC list — owner is always BCC'd on client report emails */
+  bcc?: string[];
 }
 
 export interface SendEmailResult {
@@ -58,6 +60,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
       body: JSON.stringify({
         from: FROM_ADDRESS,
         to: [opts.to],
+        ...(opts.bcc && opts.bcc.length > 0 ? { bcc: opts.bcc } : {}),
         subject: opts.subject,
         html: opts.html,
         text: opts.text,
@@ -506,6 +509,11 @@ export async function sendOwnerAuditNotification(params: {
   upgradeCost: string;
   urgentCost: string;
   isDemoMode: boolean;
+  /**
+   * When true, marks this as an internal owner/test run.
+   * The urgency signal and discount countdown are suppressed in the email.
+   */
+  isOwnerTest?: boolean;
   findings?: AuditFinding[];
   topGaps?: string[];
 }): Promise<SendEmailResult> {
@@ -513,6 +521,7 @@ export async function sendOwnerAuditNotification(params: {
     url, businessName, contactName, email, phone,
     overallScore, seoScore, sgoScore, geoScore,
     tier, upgradeCost, urgentCost, isDemoMode,
+    isOwnerTest = false,
     findings = [], topGaps = [],
   } = params;
 
@@ -521,7 +530,10 @@ export async function sendOwnerAuditNotification(params: {
   const hasContact = email || phone;
   const displayName = contactName ?? businessName ?? "Anonymous visitor";
 
-  const urgencySignal = overallScore === null ? "⚠️ Demo mode"
+  // Owner test runs show a clear TEST banner instead of urgency signals
+  const urgencySignal = isOwnerTest
+    ? "🧪 OWNER TEST — no lead saved, no Zapier fired, no discount countdown"
+    : overallScore === null ? "⚠️ Demo mode"
     : overallScore < 25 ? "🔴 CRITICAL — high-value lead, act within 24hrs"
     : overallScore < 50 ? "🟠 HIGH PRIORITY — strong upgrade potential"
     : overallScore < 75 ? "🟡 MEDIUM PRIORITY — targeted fixes available"
@@ -626,7 +638,7 @@ export async function sendOwnerAuditNotification(params: {
             </tr>
             <tr>
               <td style="padding:4px 0;font-size:12px;color:rgba(255,255,255,0.5);">Mode</td>
-              <td style="padding:4px 0;font-size:12px;color:rgba(255,255,255,0.7);">${isDemoMode ? "Demo (backend offline)" : "Live audit"}</td>
+              <td style="padding:4px 0;font-size:12px;color:${isOwnerTest ? '#FFA500' : 'rgba(255,255,255,0.7)'};"><strong>${isOwnerTest ? 'OWNER TEST (no lead saved)' : isDemoMode ? 'Demo (backend offline)' : 'Live audit'}</strong></td>
             </tr>
           </table>
         </td></tr>
@@ -641,11 +653,14 @@ export async function sendOwnerAuditNotification(params: {
           ${findingsHtml}
         </td></tr>
 
-        <tr><td style="background:#0D2B1F;padding:20px 28px;border:1px solid rgba(20,184,166,0.2);">
-          <p style="margin:0 0 8px;font-size:10px;letter-spacing:1px;color:#14B8A6;font-family:monospace;text-transform:uppercase;">Investment</p>
-          <p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.7);">Standard rate: <strong style="color:#FFFFFF;">${upgradeCost}</strong></p>
+        <tr><td style="background:${isOwnerTest ? '#1A1A2E' : '#0D2B1F'};padding:20px 28px;border:1px solid ${isOwnerTest ? 'rgba(255,165,0,0.3)' : 'rgba(20,184,166,0.2)'};">
+          <p style="margin:0 0 8px;font-size:10px;letter-spacing:1px;color:${isOwnerTest ? '#FFA500' : '#14B8A6'};font-family:monospace;text-transform:uppercase;">${isOwnerTest ? 'Internal Test — No Client Action Required' : 'Investment'}</p>
+          ${isOwnerTest
+            ? `<p style="margin:0;font-size:12px;color:rgba(255,165,0,0.8);">This audit was run with <strong>isOwnerTest: true</strong>. No lead was saved, no Zapier webhook fired, no discount countdown started. Email delivery test only.</p>`
+            : `<p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.7);">Standard rate: <strong style="color:#FFFFFF;">${upgradeCost}</strong></p>
           <p style="margin:0 0 12px;font-size:13px;color:rgba(255,255,255,0.7);">24-hr priority rate: <strong style="color:#14B8A6;">${urgentCost}</strong> ← 20% discount if booked today</p>
-          ${hasContact ? `<a href="${mailtoLink}" style="display:inline-block;background:#14B8A6;color:#0B1426;font-weight:700;font-size:13px;padding:12px 24px;border-radius:6px;text-decoration:none;">Reply to Lead →</a>` : ""}
+          ${hasContact ? `<a href="${mailtoLink}" style="display:inline-block;background:#14B8A6;color:#0B1426;font-weight:700;font-size:13px;padding:12px 24px;border-radius:6px;text-decoration:none;">Reply to Lead →</a>` : ""}`
+          }
         </td></tr>
 
         <tr><td style="background:#0B1426;border-radius:0 0 10px 10px;padding:16px 28px;border-top:1px solid rgba(255,255,255,0.06);">
@@ -658,7 +673,9 @@ export async function sendOwnerAuditNotification(params: {
 </body>
 </html>`;
 
-  const subject = hasContact
+  const subject = isOwnerTest
+    ? `🧪 [TEST] Owner audit: ${siteName} — ${scoreDisplay}`
+    : hasContact
     ? `🔔 New Lead: ${displayName} audited ${siteName} — ${scoreDisplay}`
     : `👁 Anonymous audit: ${siteName} — ${scoreDisplay}`;
 
