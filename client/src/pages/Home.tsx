@@ -6,6 +6,7 @@
    ============================================================ */
 import { useState } from "react";
 import { AuditForm } from "@/components/AuditForm";
+import { LandingSection } from "@/components/LandingSection";
 import { AuditResults } from "@/components/AuditResults";
 import { generateMockAudit, type AuditData } from "@/lib/mockAudit";
 import { trpc } from "@/lib/trpc";
@@ -198,6 +199,11 @@ export default function Home() {
                 <TrustBadge label="SGO Readiness" />
                 <TrustBadge label="GEO Signals" />
               </div>
+              {/* Divider */}
+              <div className="mt-16 border-t border-white/8" />
+
+              {/* SMAIDM Agency brand content */}
+              <LandingSection />
             </>
           ) : (
             <>
@@ -246,12 +252,12 @@ export default function Home() {
                 082 266 0899
               </a>
               <a
-                href="https://quzllhzj.manus.space/"
+                href="https://smaidm.online"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
               >
-                Website
+                smaidm.online
               </a>
               <a
                 href="http://www.youtube.com/@SMAIDM"
