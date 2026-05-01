@@ -252,12 +252,12 @@ export default function Home() {
                 082 266 0899
               </a>
               <a
-                href="https://smaidm.online"
+                href="https://domains.co.za/railway"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs mono text-white/30 hover:text-teal-400 transition-colors"
               >
-                smaidm.online
+                domains.co.za/railway
               </a>
               <a
                 href="http://www.youtube.com/@SMAIDM"

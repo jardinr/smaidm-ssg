@@ -7,7 +7,7 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
  */
 export const CALENDLY_URL =
   (import.meta.env.VITE_CALENDLY_URL as string | undefined) ??
-  "https://calendly.com/smaidm/strategy-call";
+  "https://cal.com/aithlete/discoverycall";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
 // Returns a safe fallback when OAuth env vars are not configured (e.g. self-hosted deployments).
