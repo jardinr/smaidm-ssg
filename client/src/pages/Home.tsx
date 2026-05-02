@@ -49,6 +49,7 @@ export default function Home() {
       contactName: formData.contactName || undefined,
       email: formData.email || undefined,
       phone: formData.phone || undefined,
+      isOwnerTest: isAdmin,
     });
   };
 
@@ -157,7 +158,7 @@ export default function Home() {
 
               {/* Audit form card */}
               <div className="glass-card p-6 sm:p-8">
-                <AuditForm onSubmit={handleAudit} isLoading={isLoading} />
+                <AuditForm onSubmit={handleAudit} isLoading={isLoading} isAdmin={isAdmin} />
 
                 {/* Loading state */}
                 {isLoading && (
@@ -224,7 +225,7 @@ export default function Home() {
                   </span>
                 </div>
               )}
-              <AuditResults data={auditData} onReset={handleReset} />
+              <AuditResults data={auditData} onReset={handleReset} isAdmin={isAdmin} />
             </>
           )}
         </div>

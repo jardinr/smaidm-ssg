@@ -19,6 +19,7 @@ type Finding = AuditData["findings"][number];
 interface AuditResultsProps {
   data: AuditData;
   onReset: () => void;
+  isAdmin?: boolean;
 }
 
 type DimensionFilter = "All" | "SEO" | "SGO" | "GEO";
@@ -57,7 +58,7 @@ const CRITERION_FIX: Record<string, string> = {
   "External Authority Links": "Link to 2–3 credible external sources relevant to your services.",
 };
 
-export function AuditResults({ data, onReset }: AuditResultsProps) {
+export function AuditResults({ data, onReset, isAdmin }: AuditResultsProps) {
   const [filter, setFilter] = useState<DimensionFilter>("All");
 
   const filteredFindings: Finding[] = filter === "All"
@@ -137,14 +138,16 @@ export function AuditResults({ data, onReset }: AuditResultsProps) {
       </div>
 
       {/* Urgency Offer Banner — 24-hour countdown CTA */}
-      <UrgencyOfferBanner
-        urgentCost={getUrgentCost(data.total_score)}
-        regularCost={getRegularCost(data.total_score)}
-        siteName={siteName}
-        score={data.total_score}
-        tier={data.grade ?? ""}
-        calendlyUrl={CALENDLY_URL}
-      />
+      {!isAdmin && (
+        <UrgencyOfferBanner
+          urgentCost={getUrgentCost(data.total_score)}
+          regularCost={getRegularCost(data.total_score)}
+          siteName={siteName}
+          score={data.total_score}
+          tier={data.grade ?? ""}
+          calendlyUrl={CALENDLY_URL}
+        />
+      )}
 
       {/* Executive Summary */}
       <ExecutiveSummary />

@@ -13,9 +13,10 @@ interface AuditFormProps {
     phone: string;
   }) => void;
   isLoading: boolean;
+  isAdmin?: boolean;
 }
 
-export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
+export function AuditForm({ onSubmit, isLoading, isAdmin }: AuditFormProps) {
   const [url, setUrl] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -41,6 +42,21 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
     else if (!/^(https?:\/\/)?[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+/.test(url.trim())) {
       errs.url = "Please enter a valid website URL";
     }
+
+    // Contact info is required for clients to get the full report
+    // Admins can bypass this for testing
+    if (!isAdmin) {
+      if (!email.trim()) {
+        errs.email = "Email is required to receive your full report";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        errs.email = "Please enter a valid email address";
+      }
+
+      if (!businessName.trim()) {
+        errs.businessName = "Business name is required";
+      }
+    }
+
     return errs;
   };
 
@@ -173,25 +189,31 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
 
       {/* Business name */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
-          Business Name <span className="text-white/25 normal-case tracking-normal">(optional)</span>
-        </label>
-        <input
-          type="text"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          placeholder="ACME Corp"
-          className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
-          style={inputStyle}
-          onFocus={focusHandler}
-          onBlur={blurHandler}
-        />
-      </div>
+          <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
+            Business Name {!isAdmin && <span className="text-teal-500">*</span>}
+          </label>
+          <input
+            type="text"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="ACME Corp"
+            className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
+            style={{
+              ...inputStyle,
+              border: errors.businessName ? "1px solid oklch(0.65 0.22 15 / 0.6)" : inputStyle.border
+            }}
+            onFocus={focusHandler}
+            onBlur={blurHandler}
+          />
+          {errors.businessName && (
+            <p className="text-xs mt-1" style={{ color: "oklch(0.75 0.18 15)" }}>{errors.businessName}</p>
+          )}
+        </div>
 
       {/* Email for lead capture */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
-          Email <span className="text-white/25 normal-case tracking-normal">(get full report)</span>
+          Email {!isAdmin && <span className="text-teal-500">*</span>}
         </label>
         <input
           type="email"
@@ -199,10 +221,16 @@ export function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
           className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 text-sm focus:outline-none transition-all"
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            border: errors.email ? "1px solid oklch(0.65 0.22 15 / 0.6)" : inputStyle.border
+          }}
           onFocus={focusHandler}
           onBlur={blurHandler}
         />
+        {errors.email && (
+          <p className="text-xs mt-1" style={{ color: "oklch(0.75 0.18 15)" }}>{errors.email}</p>
+        )}
       </div>
 
       {/* Submit */}
