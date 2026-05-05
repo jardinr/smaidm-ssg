@@ -44,8 +44,9 @@ export function AuditForm({ onSubmit, isLoading, isAdmin }: AuditFormProps) {
     }
 
     // Contact info is required for clients to get the full report
-    // Admins can bypass this for testing
-    if (!isAdmin) {
+    // Admins or users using the owner email can bypass this for testing
+    const isOwnerEmail = email.trim().toLowerCase() === "smaidmsagency@outlook.com";
+    if (!isAdmin && !isOwnerEmail) {
       if (!email.trim()) {
         errs.email = "Email is required to receive your full report";
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -190,7 +191,7 @@ export function AuditForm({ onSubmit, isLoading, isAdmin }: AuditFormProps) {
       {/* Business name */}
       <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
-            Business Name {!isAdmin && <span className="text-teal-500">*</span>}
+            Business Name {(!isAdmin && email.trim().toLowerCase() !== "smaidmsagency@outlook.com") && <span className="text-teal-500">*</span>}
           </label>
           <input
             type="text"
@@ -213,7 +214,7 @@ export function AuditForm({ onSubmit, isLoading, isAdmin }: AuditFormProps) {
       {/* Email for lead capture */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold tracking-widest uppercase text-white/50 mono">
-          Email {!isAdmin && <span className="text-teal-500">*</span>}
+          Email {(!isAdmin && email.trim().toLowerCase() !== "smaidmsagency@outlook.com") && <span className="text-teal-500">*</span>}
         </label>
         <input
           type="email"

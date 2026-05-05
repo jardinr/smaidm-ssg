@@ -43,13 +43,16 @@ export default function Home() {
     setAuditData(null);
     setIsDemoMode(false);
 
+    const isOwnerEmail = formData.email?.toLowerCase() === "smaidmsagency@outlook.com";
+    const isOwnerTest = isAdmin || isOwnerEmail;
+
     auditMutation.mutate({
       url: formData.url,
       businessName: formData.businessName || undefined,
       contactName: formData.contactName || undefined,
       email: formData.email || undefined,
       phone: formData.phone || undefined,
-      isOwnerTest: isAdmin,
+      isOwnerTest,
     });
   };
 
@@ -61,6 +64,10 @@ export default function Home() {
   };
 
   const isLoading = auditMutation.isPending;
+
+  // Pass a derived "effectiveIsAdmin" to components so owner-email users get the same UI benefits
+  const isOwnerEmail = auditData?.email?.toLowerCase() === "smaidmsagency@outlook.com";
+  const effectiveIsAdmin = isAdmin || isOwnerEmail;
 
   return (
     <div
@@ -225,7 +232,7 @@ export default function Home() {
                   </span>
                 </div>
               )}
-              <AuditResults data={auditData} onReset={handleReset} isAdmin={isAdmin} />
+              <AuditResults data={auditData} onReset={handleReset} isAdmin={effectiveIsAdmin} />
             </>
           )}
         </div>

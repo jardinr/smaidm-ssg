@@ -209,7 +209,15 @@ export const appRouter = router({
           isOwnerTest: z.boolean().optional().default(false),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Automatically treat as owner test if logged in as admin OR if using owner email
+        const isOwnerEmail = input.email?.toLowerCase() === "smaidmsagency@outlook.com";
+        const isAdmin = ctx.user?.role === "admin";
+        const isOwnerTest = input.isOwnerTest || isAdmin || isOwnerEmail;
+        
+        // Override input for internal logic
+        input.isOwnerTest = isOwnerTest;
+
         let auditResult: Record<string, unknown> | null = null;
         let isDemoMode = !AUDIT_API_URL;
         const tier = getTierLabel(null);
